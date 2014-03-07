@@ -61,6 +61,8 @@
     * RHEL: http://docs.docker.io/en/latest/installation/rhel/
     * Amazon Linux: http://docs.docker.io/en/latest/installation/amazon/
 
+  9. Change the hostname if you wish by editing `/etc/hostname`.
+
   9. Cleanup. Remove sudo privileges from the default user and remove the default account. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
     * Remove sudo privileges. Comment out the following line in `/etc/sudoers.d/90-cloud-init-users`:
 
