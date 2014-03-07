@@ -1,3 +1,5 @@
+## New Doskara Instance
+
 1. Launch a new instance from the Amazon EC2 console.
   1. Select your OS. Ubuntu 13.10 was my choice, because it comes loaded with the proper kernel version necessary to run LXC (the Linux namespace architecture underlying Docker containers), Docker officially supports installation on Ubuntu, and because Ubuntu is more familiar and easier to learn for those who have never used an enterprise-grade Linux OS before. Red Hat (RHEL) 6.4 and Amazon Linux are also good choices.
   2. Choose your instance type. This is probably t1.micro.
@@ -62,7 +64,7 @@
     * Amazon Linux: http://docs.docker.io/en/latest/installation/amazon/
 
   9. Change the hostname if you wish by editing `/etc/hostname`.
-
+  9. Since Amazon does not allow us to modify DNS entries on our private subnet, we can use `/etc/hosts` instead (or set up a name server, but that takes substantial extra effort). In `/etc/hosts`, add the `[private ip address] [hostname]` combination for every host on the Doskara VPC that you wish to connect to by hostname. Also, if you changed the hostname in `/etc/hostname`, add `127.0.0.1 [hostname]`.
   9. Cleanup. Remove sudo privileges from the default user and remove the default account. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
     * Remove sudo privileges. Comment out the following line in `/etc/sudoers.d/90-cloud-init-users`:
 
