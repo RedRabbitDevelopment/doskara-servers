@@ -27,34 +27,34 @@
   2. Set user passwords using `sudo passwd [username]`.
   3. Give members of the doskara group sudo permissions. Add the following line to `/etc/sudoers` using the command `sudo visudo`:
 
-         ``` 
-         %doskara    ALL=(ALL) ALL
-         ```
+     ``` 
+     %doskara    ALL=(ALL) ALL
+     ```
 
   4. Configure SSH. We want to allow password authentication, but disallow logging in as root. Change the following lines:
 
-         ```
-         PermitRootLogin yes
-         
-         PasswordAuthentication no
-         ```
+     ```
+     PermitRootLogin yes
+     
+     PasswordAuthentication no
+     ```
 
      to:
 
-         ```
-         PermitRootLogin no
-         
-         PasswordAuthentication yes
-         ```
+     ```
+     PermitRootLogin no
+     
+     PasswordAuthentication yes
+     ```
 
   5. Ensure that you can log in as one of the new users by running `ssh [username]@[ip address]` from a remote machine. You can copy over ssh keys to the new user at this time if you wish.
   6. While logged in as a new user, ensure that your sudo privileges are working by running: `sudo -l` and confirming that the user has `ALL` permissions.
   7. Install necessary software. Run the following commands:
 
-         ```
-         sudo apt-get update -y
-         sudo apt-get install -y git
-         ```
+     ```
+     sudo apt-get update -y
+     sudo apt-get install -y git
+     ```
 
   8. Install docker. Follow the docker documentation.
     * Ubuntu: http://docs.docker.io/en/latest/installation/ubuntulinux/
