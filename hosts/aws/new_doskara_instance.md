@@ -82,11 +82,10 @@
   1. Change the hostname if you wish by editing `/etc/hostname`.
   2. Since Amazon does not allow us to modify DNS entries on our private subnet, we can use `/etc/hosts` instead (or set up a name server, but that takes substantial extra effort). In `/etc/hosts`, add the `[private ip address] [hostname]` combination for every host on the Doskara VPC that you wish to connect to by hostname. Get the private IP addresses from the Amazon EC2 console. Also, if you changed the hostname in `/etc/hostname`, add `127.0.0.1 [hostname]`.
 9. Cleanup. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
-  1. Remove sudo privileges from the default user and remove the default account.
-    * Remove sudo privileges. Comment out the following line in `/etc/sudoers.d/90-cloud-init-users`:
-      ```
-      ubuntu ALL=(ALL) NOPASSWD:ALL
+  1. Remove sudo privileges from the default user. Comment out the following line in `/etc/sudoers.d/90-cloud-init-users`:
+    ```
+    ubuntu ALL=(ALL) NOPASSWD:ALL
 
-      ```
+    ```
   2. Remove the default user. Use `sudo deluser ubuntu` on ubuntu. Use the manual method and the `userdel` on RHEL / Amazon Linux.
 10. Reboot, ensure everything comes back up properly and you can log in as one of the new users, and you are ready to rock and roll!
