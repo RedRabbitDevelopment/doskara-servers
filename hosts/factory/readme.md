@@ -8,6 +8,8 @@ More likely, however, you will be invoking the build script from a remote machin
 
     doskara-admin@port $ ssh factory "/usr/local/doskara/build.sh myapp" < myapp.tar.gz
 
+(In the future, we will create a "docker" user for this host, through which all docker commands must be run. So eventually the ssh command will change to `ssh docker@factory ...`. But not yet.)
+
 The build script will report all relevant information back to stdout so that you are free to look at it/log it/whatever.
 
 In addition, the build script will implement some basic error-checking and sanity-checking. These checks will be documented here when they are implemented.
