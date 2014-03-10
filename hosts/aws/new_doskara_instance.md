@@ -27,8 +27,9 @@
   3. Give members of the doskara group sudo permissions. Add the following line to `/etc/sudoers` using the command `sudo visudo`:
      ``` 
      %doskara    ALL=(ALL) ALL
+
      ```
-  4. Configure SSH. We want to allow password authentication, but disallow logging in as root. Change the following lines:
+  4. Configure SSH. We want to allow password authentication, but disallow logging in as root. Change the following lines in `/etc/ssh/sshd_config`:
      ```
      PermitRootLogin yes
      
@@ -42,10 +43,11 @@
      ```
   5. Ensure that you can log in as one of the new users by running `ssh [username]@[ip address]` from a remote machine. You can copy over ssh keys to the new user at this time if you wish.
   6. While logged in as a new user, ensure that your sudo privileges are working by running: `sudo -l` and confirming that the user has `ALL` permissions.
-  7. Install necessary software. Run the following commands:
+  7. Install necessary software. Run the following commands (Ubuntu):
      ```
      sudo apt-get update -y
      sudo apt-get install -y git
+
      ```
   8. Install docker. Follow the docker documentation.
     * Ubuntu: http://docs.docker.io/en/latest/installation/ubuntulinux/
@@ -59,8 +61,8 @@
   9. Since Amazon does not allow us to modify DNS entries on our private subnet, we can use `/etc/hosts` instead (or set up a name server, but that takes substantial extra effort). In `/etc/hosts`, add the `[private ip address] [hostname]` combination for every host on the Doskara VPC that you wish to connect to by hostname. Also, if you changed the hostname in `/etc/hostname`, add `127.0.0.1 [hostname]`.
   9. Cleanup. Remove sudo privileges from the default user and remove the default account. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
     * Remove sudo privileges. Comment out the following line in `/etc/sudoers.d/90-cloud-init-users`:
-        ```
-        ubuntu ALL=(ALL) NOPASSWD:ALL
-        ```
+      ```
+      ubuntu ALL=(ALL) NOPASSWD:ALL
+      ```
     * Remove the default user. Use `sudo deluser ubuntu` on ubuntu. Use the manual method and the `userdel` on RHEL / Amazon Linux.
 6. Reboot, ensure everything comes back up properly and you can log in as one of the new users, and you are ready to rock and roll!
