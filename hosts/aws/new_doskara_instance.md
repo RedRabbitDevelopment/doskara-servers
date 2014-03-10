@@ -51,6 +51,10 @@
     * Ubuntu: http://docs.docker.io/en/latest/installation/ubuntulinux/
     * RHEL: http://docs.docker.io/en/latest/installation/rhel/
     * Amazon Linux: http://docs.docker.io/en/latest/installation/amazon/
+  8. Add those who need to use docker to the docker group.
+    * Ubuntu: `sudo adduser [username] docker`
+    * RHEL / Amazon Linux: `sudo vigr` and `sudo vigr -s`
+    This will allow users to run docker commands without sudo.
   9. Change the hostname if you wish by editing `/etc/hostname`.
   9. Since Amazon does not allow us to modify DNS entries on our private subnet, we can use `/etc/hosts` instead (or set up a name server, but that takes substantial extra effort). In `/etc/hosts`, add the `[private ip address] [hostname]` combination for every host on the Doskara VPC that you wish to connect to by hostname. Also, if you changed the hostname in `/etc/hostname`, add `127.0.0.1 [hostname]`.
   9. Cleanup. Remove sudo privileges from the default user and remove the default account. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
