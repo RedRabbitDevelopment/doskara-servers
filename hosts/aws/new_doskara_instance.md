@@ -41,28 +41,52 @@
      
      PasswordAuthentication yes
      ```
-  5. Ensure that you can log in as one of the new users by running `ssh [username]@[ip address]` from a remote machine. You can copy over ssh keys to the new user at this time if you wish.
+  5. Ensure that you can log in as one of the new users by running `ssh [username]@[ip address]` from a remote machine. **Failing to complete this step or the next may result in locking yourself out of your new instance.** You can copy over ssh keys to the new user at this time if you wish using `ssh-copy-id` or similar.
   6. While logged in as a new user, ensure that your sudo privileges are working by running: `sudo -l` and confirming that the user has `ALL` permissions.
-  7. Install necessary software. Run the following commands (Ubuntu):
-     ```
-     sudo apt-get update -y
-     sudo apt-get install -y git
+5. Install necessary software (just git at the moment). Run the following commands: 
+  * Ubuntu:
+    ```
+    sudo apt-get update -y
+    sudo apt-get install -y git
 
-     ```
-  8. Install docker. Follow the docker documentation.
+    ```
+  * RHEL / Amazon Linux:
+    ```
+    sudo yum update -y
+    sudo yum install -y git
+
+    ```
+6. Install docker and add docker users.
+  1. Follow the docker documentation.
     * Ubuntu: http://docs.docker.io/en/latest/installation/ubuntulinux/
     * RHEL: http://docs.docker.io/en/latest/installation/rhel/
     * Amazon Linux: http://docs.docker.io/en/latest/installation/amazon/
-  8. Add those who need to use docker to the docker group.
+  2. Add those who need to use docker to the docker group.
     * Ubuntu: `sudo adduser [username] docker`
     * RHEL / Amazon Linux: `sudo vigr` and `sudo vigr -s`
     This will allow users to run docker commands without sudo.
-  9. Change the hostname if you wish by editing `/etc/hostname`.
-  9. Since Amazon does not allow us to modify DNS entries on our private subnet, we can use `/etc/hosts` instead (or set up a name server, but that takes substantial extra effort). In `/etc/hosts`, add the `[private ip address] [hostname]` combination for every host on the Doskara VPC that you wish to connect to by hostname. Also, if you changed the hostname in `/etc/hostname`, add `127.0.0.1 [hostname]`.
-  9. Cleanup. Remove sudo privileges from the default user and remove the default account. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
+7. Set up Doskara repository.
+  1. Create and prepare the doskara directory:
+    ```
+    sudo mkdir /usr/local/doskara
+    sudo chgrp doskara /usr/local/doskara
+    sudo chmod 775 /usr/local/doskara
+    sudo chmod g+s /usr/local/doskara
+    umask 002
+
+    ```
+  2. Add your SSH key to Github. You may need to first generate an SSH key if you don't yet have one using `ssh-keygen`. 
+  3. Clone the repository: `cd /usr/local/doskara` followed by `git clone git@github.com:RedRabbitDevelopment/doskara-servers.git`
+  4. Reset your umask with `umask 022`.
+8. Final configuration
+  1. Change the hostname if you wish by editing `/etc/hostname`.
+  2. Since Amazon does not allow us to modify DNS entries on our private subnet, we can use `/etc/hosts` instead (or set up a name server, but that takes substantial extra effort). In `/etc/hosts`, add the `[private ip address] [hostname]` combination for every host on the Doskara VPC that you wish to connect to by hostname. Get the private IP addresses from the Amazon EC2 console. Also, if you changed the hostname in `/etc/hostname`, add `127.0.0.1 [hostname]`.
+9. Cleanup. **MAKE SURE ALL PREVIOUS STEPS ARE COMPLETE BEFORE DOING THIS!** You may not be able to log in to your machine otherwise.
+  1. Remove sudo privileges from the default user and remove the default account.
     * Remove sudo privileges. Comment out the following line in `/etc/sudoers.d/90-cloud-init-users`:
       ```
       ubuntu ALL=(ALL) NOPASSWD:ALL
+
       ```
-    * Remove the default user. Use `sudo deluser ubuntu` on ubuntu. Use the manual method and the `userdel` on RHEL / Amazon Linux.
-6. Reboot, ensure everything comes back up properly and you can log in as one of the new users, and you are ready to rock and roll!
+  2. Remove the default user. Use `sudo deluser ubuntu` on ubuntu. Use the manual method and the `userdel` on RHEL / Amazon Linux.
+10. Reboot, ensure everything comes back up properly and you can log in as one of the new users, and you are ready to rock and roll!
