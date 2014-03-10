@@ -29,10 +29,10 @@ ENTRYPOINT /bin/bash ./run.sh
 " > "${dockerfile}"
 
 # build docker container
-docker build -t "doskara-factory:5000/${app_name}" "${appdir}"
+docker build -t "warehouse:5000/${app_name}" "${appdir}"
 
 # push to build host
-# docker push "doskara-factory:5000/${app_name}"
+docker push "warehouse:5000/${app_name}"
 
 # clean up
 rm -rf "${appdir}"
