@@ -2,7 +2,7 @@
 
 This document contains information on the hosts that run doskara applications.  Following Heroku's convention, we refer to hosts as "dynos", even though Heroku runs multiple dynos on a single host.
 
-# Watching for idle applications
+### Watching for idle applications
 
 Using iptables, we can log IP packets that match specific rules.  This allows us to read the log to determine how long a the network has been idle for a specific service.  Here is an example iptables command that enables logging all packets destined for tcp port 80:
 
