@@ -18,6 +18,11 @@ Here is an iptables command that will add the string `DOSKARA-APP-REQUEST` and l
 
     $ sudo iptables -A INPUT -p tcp --dport 80 -j LOG --log-prefix="DOSKARA-APP-REQUEST" -m limit --limit 5/m
 
+See the following sites for more information on iptables logging:
+ * https://wiki.archlinux.org/index.php/iptables#Logging
+ * http://www.linuxtopia.org/Linux_Firewall_iptables/x4238.html
+ * http://ubuntuforums.org/showthread.php?t=866006
+
 Here is a command that will print out the most recent request that has been logged with the string `DOSKARA-APP-REQUEST`:
 
     $ sudo grep "DOSKARA-APP-REQUEST" /var/log/syslog | tail -n 1
