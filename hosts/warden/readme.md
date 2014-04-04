@@ -2,6 +2,10 @@
 
 This host will start, stop, and run commands on the doskara dynos using the AWS cli.  The cli can be invoked with the `aws` command.  See the [AWS cli documentation](http://aws.amazon.com/cli/) for more info.
 
+### Scripts in this directory
+
+* `get-instance-id.sh NAME`: Outputs the instance tagged with the given NAME.
+
 ### Setting up the cli
 
 You need to authorize the cli with AWS IAM in order for it to be allowed to run AWS commands on your behalf.  See AWS documentation for details on how to do this (I set it up once and promptly forgot how to do it again).
