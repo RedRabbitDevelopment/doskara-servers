@@ -4,7 +4,7 @@ This host will start, stop, and run commands on the doskara dynos using the AWS 
 
 ### Scripts in this directory
 
-* `get-instance-id.sh NAME`: Outputs the instance tagged with the given NAME.
+* `get-instance-id.sh NAME`: Outputs the instance id with a "Name" tag of the given NAME.
 
 ### Setting up the cli
 
