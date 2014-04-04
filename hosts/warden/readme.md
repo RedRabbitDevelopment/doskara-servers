@@ -30,7 +30,7 @@ This will launch a new t1.micro instance on the doskara-dev-apps subnet in the d
 
 [See this page in the AWS cli documentation](http://docs.aws.amazon.com/cli/latest/userguide/controlling-output.html).  Basically, use a combination of the `--query` flag along with, `sed`, `grep`, `awk`, etc. to get the information you want.  It's cumbersome, but so is the AWS cli, so you'll have to live with it.  For instance, to grab an id given a name:
 
-    $ aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*].[ImageId,Tags[*].Key,Tags[*].Value]' | grep -e "\bName\b" | grep -e "\b${1}\b" | awk '{print $1}
+    $ aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*].[ImageId,Tags[*].Key,Tags[*].Value]' | grep -e "\bName\b" | grep -e "\bdoskara-dev-warden\b" | awk '{print $1}
 
 ### Managing a running instance (a.k.a. structure)
 
