@@ -6,6 +6,7 @@ This host will start, stop, and run commands on the doskara dynos using the AWS 
 
 * `get-instance-id.sh NAME`: Example script utilizing the AWS cli that outputs the instance id with a "Name" tag of the given NAME.
 * `start-structure-host.sh`: Starts a new structure host and prints the ec2 instance id and private ip address of the new host when it is ready.
+* `stop-structure-host.sh [-t] ID ...`: Stops structure hosts with the given IDs.  Will terminate hosts instead of stopping them if the `-t` switch is provided.
 
 ### Setting up the cli
 
@@ -29,7 +30,7 @@ This will launch a new t1.micro instance on the doskara-dev-apps subnet in the d
 
 ### Getting instance info from aws cli
 
-[See this page in the AWS cli documentation](http://docs.aws.amazon.com/cli/latest/userguide/controlling-output.html).  Basically, use a combination of the `--query` flag along with, `sed`, `grep`, `awk`, etc. to get the information you want.  It's cumbersome, but so is the AWS cli, so you'll have to live with it.  For instance, to grab an id given a name:
+[See this page in the AWS cli documentation](http://docs.aws.amazon.com/cli/latest/userguide/controlling-output.html).  One good approach is to use a combination of the `--query` flag along with, `sed`, `grep`, `awk`, etc. to get the information you want.  It's cumbersome, but so is the AWS cli, so you'll have to live with it.  For instance, to grab an id given a name:
 
     $ aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*].[ImageId,Tags[*].Key,Tags[*].Value]' | grep -e "\bName\b" | grep -e "\bdoskara-dev-warden\b" | awk '{print $1}
 
