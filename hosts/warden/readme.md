@@ -4,7 +4,8 @@ This host will start, stop, and run commands on the doskara dynos using the AWS 
 
 ### Scripts in this directory
 
-* `get-instance-id.sh NAME`: Outputs the instance id with a "Name" tag of the given NAME.
+* `get-instance-id.sh NAME`: Example script utilizing the AWS cli that outputs the instance id with a "Name" tag of the given NAME.
+* `start-structure-host.sh`: Starts a new structure host and prints the ec2 instance id and private ip address of the new host when it is ready.
 
 ### Setting up the cli
 
