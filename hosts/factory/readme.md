@@ -35,4 +35,4 @@ The build script will report all relevant information back to stdout so that you
 
 In addition, the build script will implement some basic error-checking and sanity-checking. These checks will be documented here when they are implemented.
 
-**WARNING:** Due to bugs with the pre-production release of Docker ([1](https://github.com/dotcloud/docker/issues/2714)[2](https://github.com/dotcloud/docker/issues/4429#issuecomment-41740359)), Docker images may be difficult or impossible to remove.  As a result, the build host will accumulate images very quickly and can easily fill up small disks.  Please keep this in mind on the development environment, and hopefully we can find a fix/workaround soon!
+**WARNING:** Due to bugs with the pre-production release of Docker ([[1](https://github.com/dotcloud/docker/issues/2714)][[2](https://github.com/dotcloud/docker/issues/4429#issuecomment-41740359)]), Docker images may be difficult or impossible to remove.  As a result, the build host will accumulate images very quickly and can easily fill up small disks.  Please keep this in mind on the development environment, and hopefully we can find a fix/workaround soon!
