@@ -9,16 +9,12 @@ The `blueprint` instance is used solely to create AMIs for cloning.  `blueprint`
 
 ## files in this directory
 
-* [clone instance](clone_instance.md) describes how to create a cloned instance from the blueprint AMI.
+* [clone instance](clone_instance.md) describes how to create a cloned instance from the blueprint AMI and how to create an AMI from an instance.
 * [new doskara instance](new_doskara_instance.md) describes how to create a new blueprint from scratch and what decisions were made in the process of creating the first ones.
 
 ## creating a new blueprint AMI for cloning
 
-This is a really simple and intuitive process.
-  1. If it isn't stopped already, stop the instance you want to clone.
-  2. From the EC2 Instances console, select the instance you wish to clone, then select Actions > Create Image
-  3. Give the image a name to make it easy to find later.
-  4. After waiting a short period for AWS to create the image, verify that the new image is available in the AMI menu.
+This is a really simple and intuitive process.  You can read about it on the [clone instance](clone_instance.md) page.
 
 ## currently available blueprint AMIs
 
@@ -34,4 +30,4 @@ To update a blueprint AMI, just:
   1. start the blueprint instance and log into it (you may need to assign it an IP in order to log in)
   2. make the desired changes
   3. stop the instance
-  4. create a new AMI as described above
+  4. create a new AMI as described [here](clone_instance.md)
