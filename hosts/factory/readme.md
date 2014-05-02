@@ -29,7 +29,7 @@ The following format will cause a build error:
         - run.sh
         - my-server.py
 
-(In the future, we will create a "docker" user for this host, through which all docker commands must be run. So eventually the ssh command will change to `ssh docker@factory ...`. But not yet.)
+([In the future, we will create a "docker" user for this host, through which all docker commands must be run.](../blueprint/todo.md)  So eventually the ssh command will change to `ssh docker@factory ...`.  But not yet.)
 
 The build script will report all relevant information back to stdout so that you are free to look at it/log it/whatever.
 

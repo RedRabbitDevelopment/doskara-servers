@@ -32,7 +32,8 @@ ENTRYPOINT /bin/bash ./run.sh
 docker build -t "warehouse:5000/${app_name}" "${appdir}"
 
 # push to build host
-docker push "warehouse:5000/${app_name}"
+# the registry on warehouse must be running for this to work
+docker push "warehouse:5000/${app_name}" || echo "could not connect to registry on warehouse! please start the registry and attempt to push manually."
 
 # clean up
 rm -rf "${appdir}"
