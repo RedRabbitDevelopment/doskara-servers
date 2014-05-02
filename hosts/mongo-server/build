@@ -3,6 +3,5 @@ HOST="$1"
 USER="ubuntu"
 LOC="$USER@$HOST"
 
-ssh -i $KEY $LOC 'bash -s' < ./install-mongo
-scp -i $KEY ./add-user.js $LOC:~/
-scp -i $KEY ./getuser $LOC:~/
+ssh -i "$KEY" "$LOC" 'bash -s' < ./install-mongo
+scp -i "$KEY" ./getuser ./add-user.js "$LOC":~/
