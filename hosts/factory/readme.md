@@ -29,10 +29,10 @@ The following format will cause a build error:
         - run.sh
         - my-server.py
 
-([In the future, we will create a "docker" user for this host, through which all docker commands must be run.](../blueprint/todo.md)  So eventually the ssh command will change to `ssh docker@factory ...`.  But not yet.)
+([In the future, we will create a "doskara" user for this host through which all doskara tasks must be run.](../blueprint/todo.md)  Administrative commands will still be run through normal users (e.g. nathan).  So eventually the ssh command will change to `ssh doskara@factory ...`.  But not yet.  The reasons for this are accountability, security, and isolation - we can easily tie down what the doskara user is allowed to do.)
 
 The build script will report all relevant information back to stdout so that you are free to look at it/log it/whatever.
 
 In addition, the build script will implement some basic error-checking and sanity-checking. These checks will be documented here when they are implemented.
 
-**WARNING:** Due to [a bug with the pre-production release of Docker](https://github.com/dotcloud/docker/issues/2714), Docker images may be difficult or impossible to remove.  As a result, the build host will accumulate images very quickly and can easily fill up small disks.  Please keep this in mind on the development environment, and hopefully we can find a fix/workaround soon!
+**WARNING:** Due to bugs with the pre-production release of Docker ([1](https://github.com/dotcloud/docker/issues/2714)[2](https://github.com/dotcloud/docker/issues/4429#issuecomment-41740359)), Docker images may be difficult or impossible to remove.  As a result, the build host will accumulate images very quickly and can easily fill up small disks.  Please keep this in mind on the development environment, and hopefully we can find a fix/workaround soon!
