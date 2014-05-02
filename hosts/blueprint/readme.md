@@ -27,7 +27,7 @@ These images can be improved.  [The todo list](todo.md) describes possible upgra
 ## updating a blueprint AMI
 
 To update a blueprint AMI, just:
-  1. start the blueprint instance and log into it (you may need to assign it an IP in order to log in)
+  1. start the blueprint instance and log into it (you may need to assign it an IP in order to connect)
   2. make the desired changes
   3. stop the instance
   4. create a new AMI as described [here](clone_instance.md)
