@@ -1,0 +1,105 @@
+#!/bin/bash
+# USE: saveConfig "$IMAGE_NAME" "$PROJECT_NAME" ("$VERSION" optional)
+# IMAGE_NAME is the name of a docker image. This script
+# will get the configuration file from the docker image
+# and save it related to PROJECT_NAME and VERSION.
+
+IMAGE_NAME=$1
+PROJECT_NAME=$2
+VERSION=$3
+
+# Get Config File
+CONFIG_EXTS=(json)
+echo "Reading config file..."
+# Join Array
+EXTS=$(printf "|%s" "${CONFIG_EXTS[@]}")
+EXTS=${EXTS:1}
+# End Join
+REGEX="^Doskara\.($EXTS)$"
+CONFIG_FILE=$(docker run --rm "$IMAGE_NAME" ls /app | grep -P -o $REGEX) || {
+  echo "Config file not found! File must be in the root directory and match the regex \"$REGEX\""
+  exit 1
+}
+if [ $CONFIG_FILE = *$'\n'* ]; then
+  echo "Two config files found! Please remove one."
+  exit 1
+fi
+EXTENSION=$(echo "$CONFIG_FILE" | grep -oEi "($EXTS)")
+CONFIG_FILE="/app/$CONFIG_FILE"
+echo "Using $CONFIG_FILE"
+
+# Get the config contents
+
+CONTENTS=$(docker run --rm "$IMAGE_NAME" cat "$CONFIG_FILE")
+
+# Convert contents to JSON
+case "$EXTENSION" in
+  json)
+	JSON_STR="$(echo $CONTENTS | tr -d "\n\r")"
+	;;
+esac
+
+# Validate config
+ESC_JSON=${JSON_STR//\"/\\\"}
+SCRIPT="var json_str = \"$ESC_JSON\";"
+SCRIPT+=$(cat <<EOF
+(function(json_str) {
+  try {
+    var contents;
+    try {
+      contents = JSON.parse(json_str);
+    } catch(e) {
+      throw new Error('InvalidJson');
+    }
+  } catch(e) {
+    print(e.message);
+  }
+  return;
+})(json_str);
+EOF
+)
+ERROR=$(mongo --nodb --quiet --eval "$SCRIPT")
+if [ -n "$ERROR" ]; then
+  if [ "$ERROR" == "InvalidJson" ]; then
+    echo "Error parsing json"
+  else
+    echo "ValidateError: $ERROR" 1>&2
+  fi
+  exit 1
+fi
+
+# Persist the configuration
+
+MONGO_URI="oceanic.mongohq.com:10056/doskara"
+MONGO_USER="doskara"
+MONGO_PASS="DH3e4ZD0UWUsEwwtM7i6pfZulDdk0Bfn"
+ESC_NAME=${PROJECT_NAME//\"/\\\"}
+ESC_VERSION=${VERSION//\"/\\\"}
+SCRIPT="var config = \"$ESC_JSON\";"
+SCRIPT+="var image = \"$ESC_NAME\";"
+SCRIPT+="var version = \"$ESC_VERSION\";"
+SCRIPT+=$(cat <<EOF
+try {
+  var success = true;
+  try {
+    config = JSON.parse(config);
+  } catch(e) {
+    throw new Error('JsonParseError');
+  }
+  db.atoms.update({
+    image: image,
+    version: version
+  }, {
+    config: config
+  }, {upsert: true});
+} catch(e) {
+  print(e.message);
+}
+EOF
+)
+
+ERROR=$(mongo --quiet --eval "$SCRIPT" "$MONGO_URI" -u "$MONGO_USER" "-p$MONGO_PASS")
+if [ -n "$ERROR" ]; then
+  echo "SaveError: $ERROR" 1>&2
+  exit 1
+fi
