@@ -2,11 +2,12 @@
 set -e
 NAME="$1"
 VERSION="$2"
+echo "HERE:$NAME:$VERSION"
 REMOTE="warehouse:5000"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 IMAGE_NAME="$REMOTE/$NAME"
 if [ -n "$VERSION" ]; then
-  IMAGE_NAME="$IMAGE_NAME.$VERSION"
+  IMAGE_NAME+=".$VERSION"
 fi
 
 function clean {
