@@ -41,8 +41,8 @@ esac
 
 # Validate config
 ESC_JSON=${JSON_STR//\"/\\\"}
-SCRIPT="var json_str = \"$ESC_JSON\";"
-SCRIPT+=$(cat <<EOF
+SCRIPT=$(cat <<EOF
+var json_str = "$ESC_JSON";
 (function(json_str) {
   try {
     var contents;
@@ -75,10 +75,10 @@ MONGO_USER="doskara"
 MONGO_PASS="DH3e4ZD0UWUsEwwtM7i6pfZulDdk0Bfn"
 ESC_NAME=${PROJECT_NAME//\"/\\\"}
 ESC_VERSION=${VERSION//\"/\\\"}
-SCRIPT="var config = \"$ESC_JSON\";"
-SCRIPT+="var image = \"$ESC_NAME\";"
-SCRIPT+="var version = \"$ESC_VERSION\";"
-SCRIPT+=$(cat <<EOF
+SCRIPT=$(cat <<EOF
+var config = "$ESC_JSON";
+var image = "$ESC_NAME";
+var version = "$ESC_VERSION";
 try {
   var success = true;
   try {
@@ -90,14 +90,16 @@ try {
     image: image,
     version: version
   }, {
-    config: config
+    \$set: {
+      config: config
+    }
   }, {upsert: true});
 } catch(e) {
   print(e.message);
 }
 EOF
 )
-
+echo "$SCRIPT"
 ERROR=$(mongo --quiet --eval "$SCRIPT" "$MONGO_URI" -u "$MONGO_USER" "-p$MONGO_PASS")
 if [ -n "$ERROR" ]; then
   echo "SaveError: $ERROR" 1>&2
