@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "lodash": "^2.4.1",
     "mongodb": "^1.4.8",
     "q": "^1.0.1"
   },
