@@ -52,7 +52,7 @@ module.exports = MongoQueue = {
   },
   next: function(query, options) {
     var deferred = Q.defer();
-    options || options = {};
+    options = options || {};
     options.once = true;
     MongoQueue.on(query, options, function(doc) {
       deferred.resolve(doc);
