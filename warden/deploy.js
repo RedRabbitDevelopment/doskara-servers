@@ -39,5 +39,10 @@ Queue.on('deploy', function(doc) {
         });
       });
     });
+  }).then(function() {
+    Queue.emit({
+      event: 'deploy-complete',
+      id: doc.id
+    });
   });
 });
