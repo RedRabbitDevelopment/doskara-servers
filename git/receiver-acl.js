@@ -66,33 +66,46 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories.canpush.j
           return Queue.mongoConnect.then(function() {
             var gs = new mongodb.GridStore(Queue.db, filename, 'w');
             return Q.ninvoke(gs, 'open');
-          .then(function(gs) {
+          }).then(function(gs) {
             process.stdin.pipe(gs);
             return Q.ninvoke(process.stdin, 'on', 'end')
             .then(function() {
               gs.close();
               var id = uuid.v4();
+              var readStream = Queue.getReadStream(function(message) {
+                console.log(message);
+              });
               Queue.emit({
                 event: 'build',
-                name: repoName,
-                id: id,
+                name: atomName,
+                id: readStream.streamId,
                 version: '',
                 filename: filename
               });
-              Queue.on({
+              return Queue.next({
                 event: 'build-complete',
-                id: id
+                id: readStream.streamId
               }, function() {
                 Queue.emit({
-                  event: 'start',
-                  name: 'repoName',
-                  id: id
+                  event: 'deploy',
+                  name: atomName,
+                  id: readStream.streamId
+                });
+                return Queue.next({
+                  event: 'deploy-complete',
+                  id: readStream.streamId
+                }).then(function() {
+                  readStream.stop();
+                  console.log('Success! Now you can view your app at https://' +
+                    atomName + '.gateway.doskara.com!');
                 });
               });
             });
           });
         }
       });
+    } else {
+      throw new Error(body.error);
     }
   }
-});
+}).done();
