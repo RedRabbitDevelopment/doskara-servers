@@ -1,16 +1,53 @@
 
 var _ = require('lodash');
-var MongoClient = require('mongodb').MongoClient;
+var mongodb = require('mongodb');
+var MongoClient = mongodb.MongoClient;
 var Q = require('q');
+var uuid = require('uuid');
+var Stream = require('stream');
 
 var URI = 'mongodb://doskara:DH3e4ZD0UWUsEwwtM7i6pfZulDdk0Bfn@oceanic.mongohq.com:10056/doskara';
 var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
+  MongoQueue.db = db;
   return db.collection('messages');
-}).then(function(messages) {
-  messages.insert([{event: 'tmp'}, {event: 'tmp'}, {event: 'tmp'}, {event: 'tmp'}, {event: 'tmp'}], {w: 0});
-  return messages;
 });
 module.exports = MongoQueue = {
+  mongoConnect: mongoConnect,
+  emit: function(data) {
+    return mongoConnect.then(function(messages) {
+      data.timestamp = new Date();
+      return Q.ninvoke(messages, 'insert', data);
+    });
+  },
+  getWriteStream: function(writeStreamId) {
+    var writeStream = new Stream.Writable();
+    writeStream._write = function(chunk, encoding, callback) {
+      MongoQueue.emit({
+        event: 'write-stream',
+        streamId: writeStreamId,
+        message: chunk.toString()
+      }).then(function() {
+        callback();
+      }, callback);
+    };
+    return writeStream;
+  },
+  getReadStream: function(streamId, fn) {
+    if(!fn) {
+      fn = streamId;
+      streamId = uuid.v4();
+    }
+    MongoQueue.on({
+      event: 'write-stream',
+      streamId: streamId,
+    }, {
+      timePeriod: 100,
+      maxProcessing: 20,
+      frequency: 100
+    }, function(doc) {
+      fn(doc.message);
+    });
+  },
   on: function(query, options, fn) {
     if(!fn) {
       fn = options;
@@ -19,6 +56,7 @@ module.exports = MongoQueue = {
     options = _.defaults(options, {
       frequency: 1000,
       timePeriod: 3600000,
+      once: false,
       maxProcessing: 5
     });
     if(_.isString(query)) {

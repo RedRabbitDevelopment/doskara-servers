@@ -1,0 +1,14 @@
+DB_ID=$1
+
+OUTPUT="$(mongo --eval "var db_id = '$DB_ID';" add-user.js)"
+
+if [ $? -eq 0 ] ; then
+  if [ -n "$2" ] && [ "$2" == "debug" ] ; then
+    echo "$OUTPUT"
+  else
+    echo "$OUTPUT" | tail -1
+  fi
+else
+  echo "$OUTPUT" >> mongo.log
+  echo "{\"success\": false, \"error\": \"unknown\"}"
+fi
