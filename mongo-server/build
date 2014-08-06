@@ -1,0 +1,7 @@
+KEY=~/.ssh/yourdeveloperfriend.pem
+HOST="$1"
+USER="ubuntu"
+LOC="$USER@$HOST"
+
+ssh -i "$KEY" "$LOC" 'bash -s' < ./install-mongo
+scp -i "$KEY" ./getuser ./add-user.js "$LOC":~/

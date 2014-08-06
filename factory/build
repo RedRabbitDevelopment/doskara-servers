@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+NAME="$1"
+VERSION="$2"
+echo "HERE:$NAME:$VERSION"
+REMOTE="warehouse:5000"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+IMAGE_NAME="$REMOTE/$NAME"
+if [ -n "$VERSION" ]; then
+  IMAGE_NAME+=".$VERSION"
+fi
+
+function clean {
+  echo "Cleaning up..."
+  if [ -n "$ID" ]; then
+    SUBID=${ID:0:12}
+    CONTAINERS=$(docker ps -a | awk '{print $1}')
+    if [ -n "$(echo $CONTAINERS | grep "^$SUBID$")" ]; then
+      # ID exists
+      docker rm $ID > /dev/null
+      IMAGE_NAMES=$(docker images | awk '{print $1}')
+      if [ -n "$(echo $IMAGE_NAMES | grep "^$IMAGE_NAME$")" ]; then
+        # image exists
+        docker rmi $IMAGE_NAME > /dev/null
+      fi
+    fi
+  fi
+  exit 1
+}
+
+trap clean EXIT SIGHUP SIGTERM SIGINT SIGPIPE
+
+# Place the app inside the container
+ID=$(cat | docker run -i -a stdin progrium/buildstep /bin/bash -c "mkdir -p /app && tar -xC /app && /build/builder")
+docker attach $ID
+test $(docker wait $ID) -eq 0
+docker commit $ID "$IMAGE_NAME" > /dev/null
+
+$DIR/saveConfig "$IMAGE_NAME" "$NAME" "$VERSION"
+
+docker push "$IMAGE_NAME"
