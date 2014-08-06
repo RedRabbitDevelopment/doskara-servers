@@ -21,7 +21,7 @@ var listener = MongoQueue.on('build', function(doc) {
   console.log('got ', doc);
   var imageName = remote + '/' + doc.name;
   if(doc.version) imageName += '.' + doc.version;
-  var mongoStream = MongoQueue.getWriteStream(doc.streamId);
+  var mongoStream = MongoQueue.getWriteStream(doc.id);
   mongoStream.write('Building container');
   return Q.fcall(function() {
     var gs = new mongodb.GridStore(MongoQueue.db, doc.filename, 'r');

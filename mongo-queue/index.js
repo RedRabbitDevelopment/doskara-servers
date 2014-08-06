@@ -37,7 +37,7 @@ module.exports = MongoQueue = {
       fn = streamId;
       streamId = uuid.v4();
     }
-    MongoQueue.on({
+    var listener = MongoQueue.on({
       event: 'write-stream',
       streamId: streamId,
     }, {
@@ -47,6 +47,17 @@ module.exports = MongoQueue = {
     }, function(doc) {
       fn(doc.message);
     });
+    listener.streamId = streamId;
+    return listener;
+  },
+  next: function(query, options) {
+    var deferred = Q.defer();
+    options || options = {};
+    options.once = true;
+    MongoQueue.on(query, options, function(doc) {
+      deferred.resolve(doc);
+    });
+    return deferred.promise;
   },
   on: function(query, options, fn) {
     if(!fn) {
