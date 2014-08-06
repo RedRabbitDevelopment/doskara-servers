@@ -97,6 +97,11 @@ var listener = MongoQueue.on('build', function(doc) {
       var child = spawn('docker', ['push', imageName]);
       return makePromise(child);
     });
+  }).then(function() {
+    return Queue.emit({
+      event: 'build-complete',
+      id: doc.id
+    });
   });
 });
 
