@@ -7,6 +7,9 @@
 # 3. Save instance information
 # 4. Shut down existing aws instance for that app (if exists)
 
+echo "HERE"
+cat >> ./testfile.tz
+
 app=$1
 
 MONGO_URI="oceanic.mongohq.com:10056/doskara"
@@ -30,31 +33,31 @@ EOF
 read old_instance_id ipaddress <<< $(mongo --quiet --eval "$SCRIPT" "$MONGO_URI" -u "$MONGO_USER" "-p$MONGO_PASS")
 
 # Create an aws instance
-read new_instance_id internal_ip <<< $(aws ec2 run-instances --image-id ami-9cbdd2ac --security-group-ids sg-4b894a2e --instance-type t1.micro --subnet-id subnet-18739e7d --output text --query 'Instances[*].[InstanceId,PrivateIpAddress]')
+read new_instance_id internal_ip <<< $(aws ec2 run-instances --image-id ami-d57a00e5 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query 'Instances[*].[InstanceId,PrivateIpAddress]')
 
 echo "new $internal_ip"
 
-expect -c "
-spawn ssh -o StrictHostKeyChecking=no $internal_ip
-expect \"assword\"
-send \"foo,bar\r\"
-expect \"\#\"
-send \"mkdir /usr/local/doskara\r\"
-expect \"\#\"
-send \"apt-get install mongodb-clients\r\"
-expect \"\#\"
-send \"exit\r\"
-"
-expect -c "
-spawn scp -o StrictHostKeyChecking=no \"./doskara-servers/hosts/dynos/start-container.sh\" $internal_ip:/usr/local/doskara/start-container.sh
-expect \"assword\"
-send \"foo,bar\"
-"
-expect -c "
-spawn ssh -o StrictHostKeyChecking=no $internal_ip
-expect \"assword\"
-send \"foo,bar\"
-/usr/local/doskara/start-container.sh $app
-"
-exit 0
-aws ec2 terminate-instances --instance-ids "$new_instance_id"
+cat | ssh -i ~/.ssh/yourdeveloperfriend.pem ubuntu@$internal_ip "sudo /usr/local/doskara/start-container.sh \"$app\" \"\"" 
+
+if [[ -n "$old_instance_id" && "$old_instance_id" -ne "undefined" ]]; then
+  aws ec2 terminate-instances --instance-ids "$old_instance_id"
+fi
+SCRIPT=$(cat <<EOF
+(function() {
+  try {
+    var app = '$app';
+    var instanceId = '$new_instance_id';
+    var ipAddress = '$internal_ip';
+    var info = db.atoms.update({
+      image: app,
+      aws_instance: instanceId,
+      aws_ip: ipAddress
+    });
+  } catch (e) {
+    print('Error: ' + e.message);
+  }
+  return;
+})();
+EOF
+)
+read old_instance_id ipaddress <<< $(mongo --quiet --eval "$SCRIPT" "$MONGO_URI" -u "$MONGO_USER" "-p$MONGO_PASS")
