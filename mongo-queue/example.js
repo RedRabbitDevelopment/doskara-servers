@@ -13,11 +13,10 @@ var listener = Queue.on('tmp', {
   }
   var def = Q.defer();
   setTimeout(function() {
-    console.log('resolving');
     def.resolve();
   }, 5000);
   return def.promise;
 });
-listener.listen().then(function() {
+listener.finishPromise.then(function() {
   process.exit();
 }).done();

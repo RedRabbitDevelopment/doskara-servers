@@ -86,30 +86,34 @@ module.exports = MongoQueue = {
             });
           }
         });
-      },
-      listen: function() {
-        return listener.waitForProcessing().then(function() {
-          return listener.getDoc();
-        }).then(function(doc) {
-          doc = doc[0];
-          if(listening) {
-            listening = !options.once;
-            if(doc) {
-              var process = listener.processDoc(doc);
-              var processing = listener.processing;
-              processing.push(process = process.fin(function() {
-                processing.splice(processing.indexOf(process), 1);
-              }));
-            }
-            var timeoutDef = Q.defer();
-            setTimeout(function() {
-              timeoutDef.resolve(listener.listen());
-            }, options.frequency);
-            return timeoutDef.promise;
-          }
-        });
       }
     };
+    listener.finishPromise = listen();
     return listener;
+
+    function listen() {
+      return listener.waitForProcessing().then(function() {
+        return listener.getDoc();
+      }).then(function(doc) {
+        doc = doc[0];
+        if(listening) {
+          listening = !options.once;
+          if(doc) {
+            var process = listener.processDoc(doc);
+            var processing = listener.processing;
+            processing.push(process = process.fin(function() {
+              processing.splice(processing.indexOf(process), 1);
+            }));
+          }
+          var timeoutDef = Q.defer();
+          setTimeout(function() {
+            timeoutDef.resolve(listen());
+          }, options.frequency);
+          return timeoutDef.promise;
+        } else {
+          return Q.all(listener.processing);
+        }
+      });
+    }
   }
 };
