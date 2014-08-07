@@ -6,6 +6,7 @@ usage: start-container.sh APPNAME [ DEPENDENCY ... ]
 this script will start all DEPENDENCIES
 then start APPNAME, linking in DEPENDENCIES
 "
+echo "HERE MAN"
 
 MONGO_URI="oceanic.mongohq.com:10056/doskara"
 MONGO_USER="doskara"
@@ -20,7 +21,7 @@ function start_container() {
   local version="$2"
   echo "Starting $app"
   
-  local image_name="10.0.0.241:5000/$app"
+  local image_name="10.0.0.111:5000/$app"
   if [ -n "$version" ] ; then
     image_name+=".$version"
   fi
@@ -49,6 +50,7 @@ EOF
   )
   local deps=$(mongo --quiet --eval "$SCRIPT" "$MONGO_URI" -u "$MONGO_USER" "-p$MONGO_PASS")
   if [[ ${deps:0:7} == "Error: " ]] ; then
+    echo "$deps"
     echo "Atom $app with version $version doesn't exist."
     exit 101
   fi
@@ -78,9 +80,10 @@ EOF
   else
     ports=""
   fi
+  echo "ABOUT!"
   ID_VAL=$(docker run -d --name "$app" $ports ${link_args[@]} "$image_name" /bin/bash -c "/start web")
   echo "Setting logs for $app $ID_VAL"
-  docker logs -f $ID_VAL &>> "./${app}.log" &
+  docker logs -f $ID_VAL &>> "/home/ubuntu/logs/${app}.log" &
   echo "Successfully started $app"
 }
 

@@ -1,0 +1,179 @@
+#!/usr/bin/ruby
+# command line
+@command = ARGV[0]
+class ReceiverError < StandardError; end
+# Error Types
+ERRORS = {
+  'FastForwardError' => '[POLICY] Cannot push a non fast-forward reference',
+  'NoAccess' => "Your account #{@username} does not have access to #{@repo_name}",
+  'InvalidRepository' => "Repository #{@repo_name} does not exist.",
+  'Unknown' => 'An unknown error occured. Please try again later.'
+}
+begin
+  require 'net/http'
+  require 'net/https'
+
+  require 'json'
+
+  @repo_name = ARGV[1]
+  @username = ARGV[2]
+
+  # Request details
+  class Requester
+    @@host = "doskara.herokuapp.com"
+    @@port = 443
+    @@push_url = '/repositories/push.json'
+    @@canpush_url = '/repositories/canpush.json'
+    def initialize(repo_name)
+      @repo_name = repo_name
+    end
+    def post(url, payload)
+      req = Net::HTTP::Post.new(url, initheader = {'Content-Type' => 'application/json'})
+      req.body = payload.to_json
+      https = Net::HTTP.new(@@host, @@port)
+      https.use_ssl = true
+      response = https.start {|http| http.request(req)}
+      JSON.parse(response.body, :symbolize_names => true)
+    end
+    def canpush(username)
+      payload = {
+        :repository => {
+          :name => @repo_name,
+          :username => username
+        }
+      }
+      post @@canpush_url, payload
+    end
+    def push(id, commits)
+      payload = {
+        :repository => {
+          :id => id,
+          :commits => commits
+        },
+        :password => 'vH$qBF{pZg(qnh8jpWzp9y[@[[D@(_%/t@j5^zMC6Wcf,vHeN!vdcN!(3m6Pj7jP'
+      }
+      post @@push_url, payload
+    end
+  end
+  class Reader
+    def initialize
+      @rd, @wr = IO.pipe
+    end
+    def wr
+      @wr
+    end
+    def close
+      @wr.close
+      result = @rd.read
+      @rd.close
+      result
+    end
+  end
+  class Logger
+    @@file = '/home/git/receiver.log'
+    def initialize(type, command = nil)
+      @reader = Reader.new
+      @type = type
+      @command = command
+    end
+    def wr
+      @reader.wr
+    end
+    def close
+      result = @reader.close
+      handle = File.open @@file, 'a'
+      if result.length > 0
+        handle.write "#{@type}Error: #{Time.new.inspect}\n"
+        handle.write "Command: #{@command}\n" unless @command.nil?
+        handle.write "#{result}\n"
+      end
+      handle.close
+    end
+  end
+  module Commander
+    def self.get_result(type, command)
+      reader = Reader.new
+      result = nil
+      begin
+        run_command(type, command, reader.wr)
+      ensure
+        result = reader.close
+      end
+      result
+    end
+    def self.run_command(type, command, wr)
+      logger = Logger.new type, command
+      command_result = system(command, out: wr, err: logger.wr)
+      logger.close
+      raise ReceiverError, 'Unknown' unless command_result
+    end
+  end
+      
+
+  # handle response
+  requester = Requester.new @repo_name
+  response = requester.canpush @username
+  unless response[:success]
+    raise ReceiverError, response[:error]
+  else
+    # Send to factory
+    if @command == 'write'
+      # Check if non-fast-forward
+      is_beginning = ARGV[3] == '0' * 40
+      unless is_beginning
+        command = "git log --pretty=oneline #{ARGV[4]}..#{ARGV[3]}"
+        missed_refs = Commander::get_result('GitLog', command).split("\n")
+        if missed_refs.size > 0
+          raise ReceiverError, Errors::NON_FAST_FORWARD
+        end
+      end
+      if response[:type] == 'cell'
+        # Send saved commits to web portal
+        command = is_beginning ? ARGV[4] : "#{ARGV[3]}..#{ARGV[4]}"
+        command = "git log --pretty=format:\"%H|||%an|||%ad|||%s\" --reverse #{command}"
+        commits = Commander::get_result('GitLog', command).split("\n")
+        commits = commits.map do |commit|
+          commit_data = commit.split('|||')
+          commit_hash, author, date, *message = commit_data
+          message = message.join '|||'
+          {
+            :commit_hash => commit_hash,
+            :author => author,
+            :date => date,
+            :message => message
+          }
+        end
+        response = requester.push response[:id], commits
+        logger = Logger.new 'SaveData'
+        logger.wr.write response[:error] if response.has_key? 'error'
+        logger.close
+        raise ReceiverError, 'Unknown' unless response[:success]
+        puts "Success! Now go to http://app.doskara.com/cells/#{response[:id]} to publish your app!"
+      elsif response[:type] == 'application'
+        # remove ".git"
+        @atom_name = @repo_name[0..-5]
+        # Build
+        command = "ssh nathan@ec2-54-186-81-5.us-west-2.compute.amazonaws.com \"/usr/local/doskara/build #{@atom_name}\""
+        Commander::run_command 'Build', command, $stdout
+        # Deploy
+        command = "ssh nathan@ec2-54-186-0-226.us-west-2.compute.amazonaws.com \"/usr/local/doskara/deploy.sh #{@atom_name}\""
+        Commander::run_command 'Deploy', command, $stdout
+        puts "Success! Now you can view your app at https://#{@atom_name}.gateway.doskara.com!"
+      end
+    end
+  end
+rescue ReceiverError => e
+  if ERRORS.has_key? e.message
+    puts ERRORS[e.message] unless @command == 'read'
+  else
+    raise e
+  end
+  exit 1
+rescue Exception => e
+  logger = Logger.new 'Receiver'
+  logger.wr.write e.message + "\n"
+  logger.wr.write e.backtrace.inspect + "\n"
+  logger.close
+  puts ERRORS['Unknown'] unless @command == 'read'
+  exit 1
+end
