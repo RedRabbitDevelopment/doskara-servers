@@ -34,6 +34,7 @@ console.log('querying',  {
   console.log('got error', err, err.stack);
 }).then(function() {
   console.log('success!');
+  process.exit();
   //process.exit();
 });
 
@@ -69,7 +70,7 @@ console.log(query);
         ports = '';
       console.log('docker pulling ' + remoteName);
       return pullPromise.then(function() {
-        console.log('pulled', atom.image);
+        console.log('pulled', atom.image, 'and running');
         return Q.nfcall(exec, 'docker run -d --name "' + atom.image + '" ' + ports + links + '"' + remoteName + '" /bin/bash -c "/start web"');
       }).spread(function(stdout) {
         console.log('built docker', atom.image, stdout);
