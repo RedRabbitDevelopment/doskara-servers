@@ -88,18 +88,9 @@ console.log('Emitting build');
                 id: readStream.streamId,
                 version: '',
                 filename: filename
-<<<<<<< HEAD
-              });
-              return Queue.next({
-                event: 'build-complete',
-                id: readStream.streamId
               }).then(function() {
 console.log('emitting deploy');
-                Queue.emit({
-=======
-              }).then(function() {
                 return Queue.emitWithResponse({
->>>>>>> 88ffa85a75b64a397c96b342869ef12b3d97d724
                   event: 'deploy',
                   name: atomName,
                   id: readStream.streamId
