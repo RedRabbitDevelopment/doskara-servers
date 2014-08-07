@@ -59,11 +59,12 @@ module.exports = MongoQueue = {
         id: data.id
       }, options)
     ]).then(function(results) {
+console.log(results, results[1]);
       var result = results[1];
-      if(result.success)
-        return result.result;
+      if(result.result.success)
+        return result.result.result;
       else
-        throw new UserError(result.error);
+        throw new UserError(result.result.error);
     });
   },
   next: function(query, options) {
