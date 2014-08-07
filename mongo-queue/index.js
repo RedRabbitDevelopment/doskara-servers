@@ -9,13 +9,18 @@ var UserError = require('./userError');
 
 var URI = 'mongodb://doskara:DH3e4ZD0UWUsEwwtM7i6pfZulDdk0Bfn@oceanic.mongohq.com:10056/doskara';
 var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
-  MongoQueue.db = db;
-  return db.collection('messages');
+  return MongoQueue.db = db;
 });
 module.exports = MongoQueue = {
   mongoConnect: mongoConnect,
+  getCollection: function(collection) {
+    collection = collection || 'messages';
+    return mongoConnect.then(function(db) {
+      return db.collection(collection);
+    });
+  },
   emit: function(data) {
-    return mongoConnect.then(function(messages) {
+    return MongoQueue.getCollection().then(function(messages) {
       data.timestamp = new Date();
       return Q.ninvoke(messages, 'insert', data);
     });
@@ -114,7 +119,7 @@ console.log(results, results[1]);
     var listener = {
       processing: [],
       runQuery: function(method, args) {
-        return mongoConnect.then(function(collection) {
+        return MongoQueue.getCollection().then(function(collection) {
           return Q.npost(collection, method, args);
         });
       },
@@ -137,6 +142,7 @@ console.log(results, results[1]);
           }
         }).then(function(result) {
           if(doc.expectResponse) {
+console.log('emitting response', result);
             return MongoQueue.emit({
               event: doc.event + '-complete',
               id: doc.id,

@@ -24,7 +24,7 @@ var listener = MongoQueue.on('build', {
   }).then(function(gs) {
     console.log('piping');
     var child = spawn('docker', ['run', '-i', '-a', 'stdin', 'progrium/buildstep', '/bin/bash', '-c', 'mkdir -p /app && tar -xC /app && /build/builder']);
-    gs.stream(true).pipe(child.stdin);
+    gs.stream(true).pipe(child.stdin).on('error', console.log.bind(console, 'bad'));
     child.stderr.pipe(process.stdout);
     var chunks = [];
     var result = null;
@@ -37,6 +37,7 @@ var listener = MongoQueue.on('build', {
     return makePromise(child)
     .then(function() { console.log(arguments); return result; });
   }).then(function(id) {
+    console.log('attaching', id);
     var attachProcess = spawn('docker', ['attach', id]);
     attachProcess.stdout.pipe(through2(function(chunk, enc, cb) {
       mongoStream.write(chunk.toString());
@@ -101,18 +102,14 @@ var listener = MongoQueue.on('build', {
   }).finally(function() {
     console.log('cleaning');
     mongoStream.write('cleaning');
-    return Q.all([
-      Q.nfcall(exec, 'docker rm $(docker ps -a -q)'),
-      Q.nfcall(exec, 'docker rm "' + imageName + '"'),
-    ]).then(function() {
+    console.log('docker rm "' + imageName + '"');
+    Q.nfcall(exec, 'docker rm $(docker ps -a -q)')
+    .then(function() {
+console.log('docker rmi "' + imageName + '"');
       return Q.nfcall(exec, 'docker rmi "' + imageName + '"');
     });
   }).then(function() {
     console.log('done!');
-    return MongoQueue.emit({
-      event: 'build-complete',
-      id: doc.id
-    });
   });
 });
 

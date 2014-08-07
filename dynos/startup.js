@@ -1,4 +1,6 @@
 
+if(process.env.USER !== 'root')
+  throw new Error('must be root');
 var _ = require('lodash');
 var Queue = require('../mongo-queue');
 var Q = require('q');
