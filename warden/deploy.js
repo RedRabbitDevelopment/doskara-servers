@@ -13,10 +13,9 @@ Queue.on('deploy', function(doc) {
     writeStream.write('Got atom');
     return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-53a8d263 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
     .then(function(output) {
-      output = output[0].split('\n');
-console.log(output);
+      output = output[0].split('\t');
       var newInstanceId = output[0];
-      var newIp = output[1];
+      var newIp = output[1].replace('\n', '');
       console.log('got ' + newInstanceId + ',' + newIp);
       writeStream.write('got ' + newInstanceId + ',' + newIp);
       return Queue.emitWithResponse({
@@ -30,7 +29,7 @@ console.log(output);
           return Q.nfcall(exec, 'aws ec2 terminate-instances --instance-ids "' + atom.instanceId);
       }).then(function() {
         console.log('updating atom');
-        atoms.update({
+        return Q.ninvoke(atoms, 'update', {
           _id: atom._id
         }, {
           instanceId: newInstanceId,
@@ -40,9 +39,5 @@ console.log(output);
     });
   }).then(function() {
     console.log('completing deploy');
-    Queue.emit({
-      event: 'deploy-complete',
-      id: doc.id
-    });
   });
 });

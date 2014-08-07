@@ -59,11 +59,12 @@ module.exports = MongoQueue = {
         id: data.id
       }, options)
     ]).then(function(results) {
+console.log(results, results[1]);
       var result = results[1];
-      if(result.success)
-        return result.result;
+      if(result.result.success)
+        return result.result.result;
       else
-        throw new UserError(result.error);
+        throw new UserError(result.result.error);
     });
   },
   next: function(query, options) {
@@ -71,11 +72,9 @@ module.exports = MongoQueue = {
     options = options || {};
     options.next = true;
     var listener = MongoQueue.on(query, options, function(doc) {
-console.log('got doc');
       deferred.resolve(doc);
     });
     listener.finishPromise.then(function() {
-console.log('finish');
       deferred.resolve();
     });
     return deferred.promise;
