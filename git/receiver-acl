@@ -82,12 +82,13 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
                 console.log(message);
               });
 console.log('Emitting build');
-              Queue.emit({
+              return Queue.emitWithResponse({
                 event: 'build',
                 name: atomName,
                 id: readStream.streamId,
                 version: '',
                 filename: filename
+<<<<<<< HEAD
               });
               return Queue.next({
                 event: 'build-complete',
@@ -95,12 +96,12 @@ console.log('Emitting build');
               }).then(function() {
 console.log('emitting deploy');
                 Queue.emit({
+=======
+              }).then(function() {
+                return Queue.emitWithResponse({
+>>>>>>> 88ffa85a75b64a397c96b342869ef12b3d97d724
                   event: 'deploy',
                   name: atomName,
-                  id: readStream.streamId
-                });
-                return Queue.next({
-                  event: 'deploy-complete',
                   id: readStream.streamId
                 }).then(function() {
 console.log('deploy done');

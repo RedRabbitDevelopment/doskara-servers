@@ -5,6 +5,7 @@ var MongoClient = mongodb.MongoClient;
 var Q = require('q');
 var uuid = require('uuid');
 var Stream = require('stream');
+var UserError = require('./userError');
 
 var URI = 'mongodb://doskara:DH3e4ZD0UWUsEwwtM7i6pfZulDdk0Bfn@oceanic.mongohq.com:10056/doskara';
 var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
@@ -50,10 +51,27 @@ module.exports = MongoQueue = {
     listener.streamId = streamId;
     return listener;
   },
+  emitWithResponse: function(data, options) {
+    data.id = data.id || uuid.v4();
+    data.expectResponse = true;
+    return Q.all([
+      MongoQueue.emit(data),
+      MongoQueue.next({
+        event: data.event + '-complete',
+        id: data.id
+      }, options)
+    ]).then(function(results) {
+      var result = results[1];
+      if(result.success)
+        return result.result;
+      else
+        throw new UserError(result.error);
+    });
+  },
   next: function(query, options) {
     var deferred = Q.defer();
     options = options || {};
-    options.once = true;
+    options.next = true;
     MongoQueue.on(query, options, function(doc) {
       deferred.resolve(doc);
     });
@@ -68,6 +86,7 @@ module.exports = MongoQueue = {
       frequency: 1000,
       timePeriod: 3600000,
       once: false,
+      next: false,
       maxProcessing: 5
     });
     if(_.isString(query)) {
@@ -100,6 +119,30 @@ module.exports = MongoQueue = {
       processDoc: function(doc) {
         return Q.fcall(function() {
           return fn(doc);
+        }).then(function(result) {
+          return {
+            success: true,
+            result: result
+          };
+        }, function(err) {
+          if(err instanceof UserError) {
+            return {
+              success: false,
+              error: err.message
+            };
+          } else {
+            throw err;
+          }
+        }).then(function(result) {
+          if(doc.expectResponse) {
+            return MongoQueue.emit({
+              event: doc.event + '-complete',
+              id: doc.id,
+              result: result
+            });
+          } else if(!result.success) {
+            throw result.error;
+          }
         }).then(function() {
           return listener.runQuery('remove', [{_id: doc._id}]);
         }, function(err) {
@@ -146,8 +189,9 @@ module.exports = MongoQueue = {
       }).then(function(doc) {
         doc = doc[0];
         if(listening) {
+          listening = !options.once;
           if(doc) {
-            listening = !options.once;
+            listening = listening && !options.next;
             var process = listener.processDoc(doc);
             var processing = listener.processing;
             processing.push(process = process.fin(function() {
