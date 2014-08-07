@@ -5,15 +5,15 @@ var exec = require('child_process').exec;
 
 Queue.on('deploy', function(doc) {
   var atomName = doc.name;
-  var atoms = Queue.db.collections('atoms');
+  var atoms = Queue.db.collection('atoms');
   var writeStream = Queue.getWriteStream(doc.id);
   return Q.ninvoke(atoms, 'findOne', {
     image: atomName
   }).then(function(atom) {
     writeStream.write('Got atom');
-    return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-9cbdd2ac --security-group-ids sg-4b894a2e --instance-type t1.micro --subnet-id subnet-18739e7d --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
+    return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-d57a00e5 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
     .then(function(output) {
-      output = output.split('\t');
+      output = output[0].split('\n');
       var newInstanceId = output[0];
       var newIp = output[1];
       console.log('got ' + newInstanceId + ' ' + newIp);
