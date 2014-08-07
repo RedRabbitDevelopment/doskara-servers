@@ -1,49 +1,59 @@
 
+var _ = require('lodash');
 var Queue = require('../mongo-queue');
 var Q = require('q');
+var os = require('os');
+var exec = require('child_process').exec;
 
 Queue.mongoConnect.then(function() {
-  var messages = Queue.db.collection('messages');
-  messages.findAndModify([{
+  return Queue.on({
     event: 'startInstance',
-    ipAddress: os.networkInterfaces().eth0
-  }, [['_id', 'desc']], {remove: true}
-  ], function(doc) {
+    ipAddress: os.networkInterfaces().eth0[0].address
+  }, {
+    once: true
+  }).then(function(doc) {
+    doc = doc[0];
     if(doc) {
+      console.log('got doc', doc);
       var writeStream = Queue.getWriteStream(doc.id);
       writeStream.write('got doc!');
-      console.log('got doc');
-      var atoms = Queue.db.collection('atoms');
-      return buildContainer(doc.atomName)
+      return buildContainer(doc.name)
       .then(function() {
-        return Queue.emit({
-        event: 'startInstance-complete',
-          id: doc.id
-        });
+        return true;
       });
+    } else {
+      console.log('no doc found');
     }
   });
+}).catch(function(err) {
+  console.log('got error', err, err.stack);
+}).then(function() {
+  console.log('success!');
+  process.exit();
 });
 
 var remote = '10.0.0.111:5000';
 function buildContainer(atomName, version) {
-  var query = {name: atomName};
+  var query = {image: atomName};
   var remoteName = remote + '/' + atomName;
   if(version) {
     query.version = version;
     remoteName += '.' + version;
   }
+  var atoms = Queue.db.collection('atoms');
+console.log(query);
   return Q.ninvoke(atoms, 'findOne', query)
   .then(function(atom) {
-    console.log('got atom', atom.name);
+    console.log('got atom', atom);
     var dependencies = {};
-    _.forEach(atom.dependencies || {}, function(depVersion, depName) {
+    var promises = _.map(atom.config.dependencies || {}, function(depVersion, depName) {
       return buildContainer(depName, depVersion).then(function(container) {
         dependencies[depName] = container;
       });
     });
-    return Q.all(_.values(deps)).then(function() {
-      console.log(' got ' + atom.name + ' dependencies');
+    var pullPromise = Q.nfcall(exec, 'docker pull "' + remoteName + '"');
+    return Q.all(_.values(promises)).then(function() {
+      console.log(' got ' + atom.image + ' dependencies');
       var links = Object.keys(dependencies).map(function(key) {
         return ['--link ', key, ':', key].join('');
       }).join(' ') + ' ';
@@ -52,12 +62,13 @@ function buildContainer(atomName, version) {
         ports = '-p 80:80 ';
       else
         ports = '';
-      return Q.nfcall(exec, 'docker pull "' + remoteName + '"').then(function() {
-        console.log('pulled', atom.name);
-        return Q.ninvoke(exec, 'docker run -d --name "' + atom.name + '" ' + ports + links + '"' + remoteName + '" /bin/bash -c "/start web"');
+      console.log('docker pulling ' + remoteName);
+      return pullPromise.then(function() {
+        console.log('pulled', atom.image);
+        return Q.nfcall(exec, 'docker run -d --name "' + atom.image + '" ' + ports + links + '"' + remoteName + '" /bin/bash -c "/start web"');
       }).spread(function(stdout) {
-        console.log('built docker', atom.name, stdout);
+        console.log('built docker', atom.image, stdout);
       });
     });
   });
-});
+};
