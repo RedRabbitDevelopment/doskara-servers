@@ -88,6 +88,7 @@ console.log('Emitting build');
                 id: readStream.streamId,
                 version: '',
                 filename: filename
+              }).then(function() {
 console.log('emitting deploy');
                 return Queue.emitWithResponse({
                   event: 'deploy',
