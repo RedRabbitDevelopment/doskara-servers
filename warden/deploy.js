@@ -18,14 +18,10 @@ Queue.on('deploy', function(doc) {
       var newIp = output[1];
       console.log('got ' + newInstanceId + ' ' + newIp);
       writeStream.write('got ' + newInstanceId + ' ' + newIp);
-      Queue.emit({
+      return Queue.emitWithResponse({
         event: 'startInstance',
         ipAddress: newIp,
         name: atomName,
-        id: doc.id
-      });
-      Queue.next({
-        event: 'startInstance-complete',
         id: doc.id
       }).then(function() {
         if(atom.oldInstanceId)
