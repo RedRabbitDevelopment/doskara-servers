@@ -15,9 +15,9 @@ Queue.on('deploy', function(doc) {
     .then(function(output) {
       output = output[0].split('\t');
       var newInstanceId = output[0];
-      var newIp = output[1];
+      var newIp = output[1].replace('\n', '');
       console.log('got ' + newInstanceId + ',' + newIp);
-      writeStream.write('got ' + newInstanceId + ' ' + newIp);
+      writeStream.write('got ' + newInstanceId + ',' + newIp);
       return Queue.emitWithResponse({
         event: 'startInstance',
         ipAddress: newIp,
@@ -29,7 +29,7 @@ Queue.on('deploy', function(doc) {
           return Q.nfcall(exec, 'aws ec2 terminate-instances --instance-ids "' + atom.instanceId);
       }).then(function() {
         console.log('updating atom');
-        atoms.update({
+        return Q.ninvoke(atoms, 'update', {
           _id: atom._id
         }, {
           instanceId: newInstanceId,
@@ -39,9 +39,5 @@ Queue.on('deploy', function(doc) {
     });
   }).then(function() {
     console.log('completing deploy');
-    Queue.emit({
-      event: 'deploy-complete',
-      id: doc.id
-    });
   });
 });
