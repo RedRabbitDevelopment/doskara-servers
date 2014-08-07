@@ -1,4 +1,6 @@
 
+if(process.env.USER !== 'root')
+  throw new Error('must be root');
 var _ = require('lodash');
 var Queue = require('../mongo-queue');
 var Q = require('q');
@@ -6,13 +8,16 @@ var os = require('os');
 var exec = require('child_process').exec;
 
 Queue.mongoConnect.then(function() {
-  return Queue.on({
+console.log('querying',  {
+    event: 'startInstance',
+    ipAddress: os.networkInterfaces().eth0[0].address
+  });
+  return Queue.next({
     event: 'startInstance',
     ipAddress: os.networkInterfaces().eth0[0].address
   }, {
     once: true
   }).then(function(doc) {
-    doc = doc[0];
     if(doc) {
       console.log('got doc', doc);
       var writeStream = Queue.getWriteStream(doc.id);
@@ -29,7 +34,7 @@ Queue.mongoConnect.then(function() {
   console.log('got error', err, err.stack);
 }).then(function() {
   console.log('success!');
-  process.exit();
+  //process.exit();
 });
 
 var remote = '10.0.0.111:5000';
