@@ -1,7 +1,9 @@
 
 var Q = require('q');
 var _ = require('lodash');
-var spawn = require('child_process').spawn;
+var cp = require('child_process');
+var spawn = cp.spawn;
+var exec = cp.exec;
 var mongodb = require('mongodb');
 var MongoQueue = require('../mongo-queue');
 var remote = 'warehouse:5000';
@@ -17,7 +19,10 @@ MongoQueue.mongoConnect.then(function(messages) {
   });
 }).done();
 
-var listener = MongoQueue.on('build', function(doc) {
+var listener = MongoQueue.on('build', {
+  maxProcessing: 1,
+  timePeriod: 600000 // Ten minutes
+}, function(doc) {
   console.log('got ', doc);
   var imageName = remote + '/' + doc.name;
   if(doc.version) imageName += '.' + doc.version;
@@ -96,6 +101,15 @@ var listener = MongoQueue.on('build', function(doc) {
       mongoStream.write('Pushing to docker repository');
       var child = spawn('docker', ['push', imageName]);
       return makePromise(child);
+    });
+  }).finally(function() {
+    console.log('cleaning');
+    mongoStream.write('cleaning');
+    return Q.all([
+      Q.nfcall(exec, 'docker rm $(docker ps -a -q)'),
+      Q.nfcall(exec, 'docker rm "' + imageName + '"'),
+    ]).then(function() {
+      return Q.nfcall(exec, 'docker rmi "' + imageName + '"');
     });
   }).then(function() {
     return Queue.emit({
