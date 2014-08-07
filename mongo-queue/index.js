@@ -146,8 +146,8 @@ module.exports = MongoQueue = {
       }).then(function(doc) {
         doc = doc[0];
         if(listening) {
-          listening = !options.once;
           if(doc) {
+            listening = !options.once;
             var process = listener.processDoc(doc);
             var processing = listener.processing;
             processing.push(process = process.fin(function() {

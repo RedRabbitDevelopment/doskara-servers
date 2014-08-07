@@ -92,7 +92,8 @@ console.log('Emitting build');
               return Queue.next({
                 event: 'build-complete',
                 id: readStream.streamId
-              }, function() {
+              }).then(function() {
+console.log('emitting deploy');
                 Queue.emit({
                   event: 'deploy',
                   name: atomName,
@@ -102,6 +103,7 @@ console.log('Emitting build');
                   event: 'deploy-complete',
                   id: readStream.streamId
                 }).then(function() {
+console.log('deploy done');
                   readStream.stop();
                   console.log('Success! Now you can view your app at https://' +
                     atomName + '.gateway.doskara.com!');
