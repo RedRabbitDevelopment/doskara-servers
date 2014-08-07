@@ -14,10 +14,11 @@ Queue.on('deploy', function(doc) {
     return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-53a8d263 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
     .then(function(output) {
       output = output[0].split('\n');
+console.log(output);
       var newInstanceId = output[0];
       var newIp = output[1];
       console.log('got ' + newInstanceId + ',' + newIp);
-      writeStream.write('got ' + newInstanceId + ' ' + newIp);
+      writeStream.write('got ' + newInstanceId + ',' + newIp);
       return Queue.emitWithResponse({
         event: 'startInstance',
         ipAddress: newIp,
