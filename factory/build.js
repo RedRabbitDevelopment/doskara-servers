@@ -1,21 +1,11 @@
 
+var through2 = require('through2');
 var Q = require('q');
 var _ = require('lodash');
 var spawn = require('child_process').spawn;
 var mongodb = require('mongodb');
 var MongoQueue = require('../mongo-queue');
 var remote = 'warehouse:5000';
-
-MongoQueue.mongoConnect.then(function(messages) {
-  Q.ninvoke(messages, 'remove', {});
-  Q.ninvoke(messages, 'insert', {
-    event: 'build',
-    name: 'happy',
-    version: 'day',
-    filename: 'example.tar',
-    streamId: 'booya'
-  });
-}).done();
 
 var listener = MongoQueue.on('build', function(doc) {
   console.log('got ', doc);
@@ -43,8 +33,14 @@ var listener = MongoQueue.on('build', function(doc) {
     .then(function() { console.log(arguments); return result; });
   }).then(function(id) {
     var attachProcess = spawn('docker', ['attach', id]);
-    attachProcess.stdout.pipe(mongoStream);
-    attachProcess.stderr.pipe(mongoStream);
+    attachProcess.stdout.pipe(through2(function(chunk, enc, cb) {
+      mongoStream.write(chunk.toString());
+      cb();
+    }));
+    attachProcess.stderr.pipe(through2(function(chunk, enc, cb) {
+      mongoStream.write(chunk.toString());
+      cb();
+    }));
     console.log('waiting', id);
     var waitChild = spawn('docker', ['wait', id]);
     return makePromise(waitChild)
@@ -98,7 +94,8 @@ var listener = MongoQueue.on('build', function(doc) {
       return makePromise(child);
     });
   }).then(function() {
-    return Queue.emit({
+    console.log('done!');
+    return MongoQueue.emit({
       event: 'build-complete',
       id: doc.id
     });

@@ -20,17 +20,15 @@ module.exports = MongoQueue = {
     });
   },
   getWriteStream: function(writeStreamId) {
-    var writeStream = new Stream.Writable();
-    writeStream._write = function(chunk, encoding, callback) {
-      MongoQueue.emit({
-        event: 'write-stream',
-        streamId: writeStreamId,
-        message: chunk.toString()
-      }).then(function() {
-        callback();
-      }, callback);
+    return {
+      write: function(message) {
+        MongoQueue.emit({
+          event: 'write-stream',
+          streamId: writeStreamId,
+          message: message
+        });
+      }
     };
-    return writeStream;
   },
   getReadStream: function(streamId, fn) {
     if(!fn) {
