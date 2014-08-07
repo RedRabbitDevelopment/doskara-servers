@@ -70,8 +70,13 @@ module.exports = MongoQueue = {
     var deferred = Q.defer();
     options = options || {};
     options.next = true;
-    MongoQueue.on(query, options, function(doc) {
+    var listener = MongoQueue.on(query, options, function(doc) {
+console.log('got doc');
       deferred.resolve(doc);
+    });
+    listener.finishPromise.then(function() {
+console.log('finish');
+      deferred.resolve();
     });
     return deferred.promise;
   },
