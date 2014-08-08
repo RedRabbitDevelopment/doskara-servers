@@ -34,6 +34,7 @@ console.log('querying',  {
   console.log('got error', err, err.stack);
 }).then(function() {
   console.log('success!');
+  process.exit();
   //process.exit();
 });
 
