@@ -64,7 +64,6 @@ module.exports = MongoQueue = {
         id: data.id
       }, options)
     ]).then(function(results) {
-console.log(results, results[1]);
       var result = results[1];
       if(result.result.success)
         return result.result.result;
@@ -142,7 +141,6 @@ console.log(results, results[1]);
           }
         }).then(function(result) {
           if(doc.expectResponse) {
-console.log('emitting response', result);
             return MongoQueue.emit({
               event: doc.event + '-complete',
               id: doc.id,
