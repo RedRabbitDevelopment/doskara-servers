@@ -51,7 +51,7 @@ console.log(query);
   .then(function(atom) {
     console.log('got atom', atom);
     var dependencies = {};
-    var promises = _.map(atom.config.dependencies || {}, function(depVersion, depName) {
+    var promises = _.map(atom.config && atom.config.dependencies || {}, function(depVersion, depName) {
       return buildContainer(depName, depVersion).then(function(container) {
         dependencies[depName] = container;
       });
