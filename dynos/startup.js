@@ -29,7 +29,7 @@ Queue.mongoConnect.then(function(db) {
     // Note: atom may not be set because it could still be pointing at the old instance!
     if(request) {
       logger.log('got doc', request);
-      var writeStream = Queue.getWriteStream(doc.id);
+      var writeStream = Queue.getWriteStream(request.id);
       writeStream.write('got doc!');
       return buildContainer(request.name)
       .then(function() {
