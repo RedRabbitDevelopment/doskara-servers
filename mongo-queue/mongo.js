@@ -1,4 +1,6 @@
 
+var MongoClient = require('mongodb').MongoClient;
+var Q = require('q');
 var URI = 'mongodb://doskara:DH3e4ZD0UWUsEwwtM7i6pfZulDdk0Bfn@oceanic.mongohq.com:10056/doskara';
 var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
   return MongoQueue.db = db;
