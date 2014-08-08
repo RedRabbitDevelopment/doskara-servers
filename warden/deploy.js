@@ -11,7 +11,7 @@ Queue.on('deploy', function(doc) {
     image: atomName
   }).then(function(atom) {
     writeStream.write('Got atom');
-    return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-53a8d263 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
+    return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-d387fde3 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
     .then(function(output) {
       output = output[0].split('\t');
       var newInstanceId = output[0];
@@ -24,16 +24,21 @@ Queue.on('deploy', function(doc) {
         name: atomName,
         id: doc.id
       }).then(function() {
-        console.log('got instance complete');
-        if(atom.oldInstanceId)
-          return Q.nfcall(exec, 'aws ec2 terminate-instances --instance-ids "' + atom.instanceId);
+        console.log('got instance complete', atom);
+        if(atom.instanceId) {
+          console.log('shutting down previous structure', atom.instanceId);
+          return Q.nfcall(exec, 'aws ec2 terminate-instances --instance-ids "' + atom.instanceId + '"');
+        }
       }).then(function() {
-        console.log('updating atom');
+        console.log('updating atom', arguments);
         return Q.ninvoke(atoms, 'update', {
           _id: atom._id
         }, {
-          instanceId: newInstanceId,
-          ipAddress: newIp
+          $set: {
+            running: true,
+            instanceId: newInstanceId,
+            ipAddress: newIp
+          }
         });
       });
     });
