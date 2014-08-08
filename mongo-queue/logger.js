@@ -31,6 +31,7 @@ Logger.prototype = {
     this.processes.push(promise);
   },
   finish: function() {
+console.log('finishing', this.processes);
     return Q.all(this.processes);
   }
 };
