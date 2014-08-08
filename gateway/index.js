@@ -1,5 +1,6 @@
 
 var httpProxy = require('http-proxy');
+var proxy = httpProxy.createProxyServer({});
 var MongoQueue = require('../mongo-queue');
 var http = require('http');
 var fs = require('fs');
@@ -7,16 +8,38 @@ MongoQueue.mongoConnect.then(function(db) {
   var atoms = db.collection('atoms');
   http.createServer(function(req, res) {
     var host = req.headers.host;
-    var subdomain = host.substring(0, host.indexOf('.'));
-    atoms.findOne({
-      image: subdomain,
-      ipAddress: {$exists: true}
-    }, function(err, atom) {
-      if(err) return console.log(err, err.stack) && res.send(404);
-      if(!atom) return res.send(404);
-      if(atom.running) return proxy.web(req, res, {target: 'http://' + atom.ipAddress});
-      fs.createReadStream(__dirname + '/index.html').pipe(res);
-    });
-  }).listen(8000);
+    if(host === 'gateway.doskara.com') {
+      switch(req.path) {
+        case '/feedback':
+          res.write('Thanks!');     
+          break;
+        default:
+          res.statusCode = 404;
+      }
+      res.end();
+    } else {
+      var subdomain = host.substring(0, host.indexOf('.'));
+      var remaining = host.substring(subdomain.length);
+      var query = {ipAddress: {$exists: true}};
+      if(remaining === '.doskara.com') {
+        query.image = subdomain;
+      } else {
+        query.domains = host;
+      }
+console.log(query);
+      atoms.findOne(query, function(err, atom) {
+console.log('here', err, atom);
+        if(err) {
+          console.log(err, err.stack);
+        }
+        if(err || !atom) {
+          res.statusCode = 404;
+          return res.end();
+        }
+        if(atom.running) return proxy.web(req, res, {target: 'http://' + atom.ipAddress});
+        fs.createReadStream(__dirname + '/index.html').pipe(res);
+      });
+    }
+  }).listen(80);
 }).done();
 
