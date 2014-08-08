@@ -25,8 +25,10 @@ Queue.on('deploy', function(doc) {
         id: doc.id
       }).then(function() {
         console.log('got instance complete');
-        if(atom.oldInstanceId)
+        if(atom.instanceId) {
+          console.log('shutting down previous structure');
           return Q.nfcall(exec, 'aws ec2 terminate-instances --instance-ids "' + atom.instanceId);
+        }
       }).then(function() {
         console.log('updating atom');
         return Q.ninvoke(atoms, 'update', {
