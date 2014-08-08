@@ -1,42 +1,85 @@
 
+console.log('here');
 if(process.env.USER !== 'root')
   throw new Error('must be root');
 var _ = require('lodash');
 var Queue = require('../mongo-queue');
+var logger = require('../mongo-queue/logger')('dyno');
 var Q = require('q');
 var os = require('os');
 var exec = require('child_process').exec;
 
-Queue.mongoConnect.then(function() {
-console.log('querying',  {
-    event: 'startInstance',
-    ipAddress: os.networkInterfaces().eth0[0].address
-  });
-  return Queue.next({
-    event: 'startInstance',
-    ipAddress: os.networkInterfaces().eth0[0].address
-  }, {
-    once: true
-  }).then(function(doc) {
-    if(doc) {
-      console.log('got doc', doc);
+logger.log('connecting to database');
+Queue.mongoConnect.then(function(db) {
+  logger.log('connected to the database');
+  var atoms = db.collection('atoms');
+  var ipAddress = os.networkInterfaces().eth0[0].address;
+  logger.log('searching for startInstance request');
+  logger.log('ipAddress', ipAddress);
+  return Q.all([
+    Queue.next({
+      event: 'startInstance',
+      ipAddress: ipAddress
+    }, {
+      once: true
+    }),
+    Q.ninvoke(atoms, 'findOne', {
+      ipAddress: ipAddress
+    })
+  ]).spread(function(request, atom) {
+    // Note: atom may not be set because it could still be pointing at the old instance!
+    if(request) {
+      logger.log('got doc', request);
       var writeStream = Queue.getWriteStream(doc.id);
       writeStream.write('got doc!');
-      return buildContainer(doc.name)
+      return buildContainer(request.name)
       .then(function() {
         return true;
       });
+    } else if(atom) {
+      logger.log('restarting shut down atom', atom._id);
+      return buildContainer(atom.name);
     } else {
-      console.log('no doc found');
+      logger.log('no doc found, shutting down');
+      return shutdown();
+    }
+  }).then(function(atom) {
+    if(atom && atom._id) {
+      Queue.on({
+        event: 'stopInstance',
+        atomId: atom._id
+      }, function(request) {
+        return Q.ninvoke(atoms, 'update', {
+          _id: atom._id,
+          ipAddress: ipAddress
+        }, {
+          $set: {
+            running: false
+          }
+        }).then(function() {
+          return shutdown(); 
+        });
+      });
+      return Q.ninvoke(atoms, 'update', {
+        _id: atom._id,
+        ipAddress: ipAddress
+      }, {
+        running: true
+      });
     }
   });
 }).catch(function(err) {
   console.log('got error', err, err.stack);
 }).then(function() {
   console.log('success!');
-  process.exit();
-  //process.exit();
 });
+
+
+var running = true;
+function shutdown() {
+  running = false;
+  //return Q.nfcall(exec, 'poweroff');
+}
 
 var remote = '10.0.0.111:5000';
 function buildContainer(atomName, version) {
@@ -71,9 +114,12 @@ console.log(query);
       console.log('docker pulling ' + remoteName);
       return pullPromise.then(function() {
         console.log('pulled', atom.image, 'and running');
+        return Q.nfcall(exec, 'docker rm "' + atom.image + '"').catch(function() {}); // Ignore error
+      }).then(function() {
         return Q.nfcall(exec, 'docker run -d --name "' + atom.image + '" ' + ports + links + '"' + remoteName + '" /bin/bash -c "/start web"');
       }).spread(function(stdout) {
         console.log('built docker', atom.image, stdout);
+        return atom;
       });
     });
   });
