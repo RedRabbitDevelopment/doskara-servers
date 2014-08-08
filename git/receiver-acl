@@ -4,13 +4,13 @@ var _ = require('lodash');
 var Q = require('q');
 var uuid = require('uuid');
 var Queue = require('../mongo-queue');
+var logger = new require('./logger')('git');
 var request = require('request');
 var exec = require('child_process').exec;
 
 var password = 'vH$qBF{pZg(qnh8jpWzp9y[@[[D@(_%/t@j5^zMC6Wcf,vHeN!vdcN!(3m6Pj7jP';
 
-var fs = require('fs');
-fs.writeFileSync(__dirname + '/output.log', JSON.stringify(process.argv));
+logger.log('Arguments', process.argv);
 var command = process.argv[2];
 var repoName = process.argv[3];
 var username = process.argv[4];
@@ -25,8 +25,10 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
     }
   }
 }).spread(function(response, body) {
+  logger.log('Body', body);
   var body = JSON.parse(body);
   if(body.success) {
+    logger.log('BodySuccess', body);
     if(command === 'write') {
       // Check if non-fast forward
       var isBeginning = beforeCommit === _.times(40, function() { return '0'; }).join('');
@@ -53,6 +55,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
                 message: commitData.slice(3).join(' ')
               };
             });
+            logger.log('PushAttempt', commits);
             return Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/push.json', {
               form: {
                 repository: {
@@ -69,6 +72,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
         } else if(body.type === 'application') {
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
           var filename = uuid.v4() + '.tar'
+          logger.log('FileUpload', filename);
           return Queue.mongoConnect.then(function() {
             var gs = new mongodb.GridStore(Queue.db, filename, 'w');
             return Q.ninvoke(gs, 'open');
@@ -82,6 +86,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
                 console.log(message);
               });
 console.log('Emitting build');
+              logger.log('BuildEmit');
               return Queue.emitWithResponse({
                 event: 'build',
                 name: atomName,
@@ -90,6 +95,7 @@ console.log('Emitting build');
                 filename: filename
               }).then(function() {
 console.log('emitting deploy');
+                logger.log('DeployEmit');
                 return Queue.emitWithResponse({
                   event: 'deploy',
                   name: atomName,
@@ -97,6 +103,7 @@ console.log('emitting deploy');
                 }).then(function() {
 console.log('deploy done');
                   readStream.stop();
+                  logger.log('Success');
                   console.log('Success! Now you can view your app at https://' +
                     atomName + '.gateway.doskara.com!');
                 });
@@ -107,11 +114,15 @@ console.log('deploy done');
       });
     }
   } else {
+    logger.log('BodyError', body.error);
     throw new Error(body.error);
   }
 }).catch(function(err) {
   if(command === 'write') console.log(err, err.stack);
+  logger.log('End Error', err, err.stack);
   return 1;
 }).then(function(code) {
-  process.exit(code);
+  return logger.finish().always(function() {
+    process.exit(code);
+  });
 });
