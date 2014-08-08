@@ -30,7 +30,7 @@ Queue.on('deploy', function(doc) {
           return Q.nfcall(exec, 'aws ec2 terminate-instances --instance-ids "' + atom.instanceId + '"');
         }
       }).then(function() {
-        console.log('updating atom');
+        console.log('updating atom', arguments);
         return Q.ninvoke(atoms, 'update', {
           _id: atom._id
         }, {
