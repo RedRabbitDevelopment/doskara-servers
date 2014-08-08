@@ -1,10 +1,9 @@
 
-console.log('here');
-if(process.env.USER !== 'root')
-  throw new Error('must be root');
+//if(process.env.USER !== 'root')
+//  throw new Error('must be root');
 var _ = require('lodash');
 var Queue = require('../mongo-queue');
-var logger = require('../mongo-queue/logger')('dyno');
+var logger = new (require('../mongo-queue/logger'))('dyno');
 var Q = require('q');
 var os = require('os');
 var exec = require('child_process').exec;
@@ -37,8 +36,9 @@ Queue.mongoConnect.then(function(db) {
         return true;
       });
     } else if(atom) {
+      console.log('here you are!', atom, atom.name);
       logger.log('restarting shut down atom', atom._id);
-      return buildContainer(atom.name);
+      return buildContainer(atom.image);
     } else {
       logger.log('no doc found, shutting down');
       return shutdown();
@@ -64,7 +64,9 @@ Queue.mongoConnect.then(function(db) {
         _id: atom._id,
         ipAddress: ipAddress
       }, {
-        running: true
+        $set: {
+          running: true
+        }
       });
     }
   });

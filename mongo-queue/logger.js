@@ -1,4 +1,6 @@
 
+var Q = require('q');
+var _ = require('lodash');
 var mongo = require('./mongo');
 var Logger = module.exports = function(name) {
   this.processes = [];
