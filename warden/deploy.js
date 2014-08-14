@@ -46,3 +46,39 @@ Queue.on('deploy', function(doc) {
     console.log('completing deploy');
   });
 });
+
+Queue.on('startStoppedInstance', function(doc) {
+  var atomName = doc.name;
+  var atoms = Queue.db.collection('atoms');
+  //var writeStream = Queue.getWriteStream(doc.id);
+  return Q.ninvoke(atoms, 'findOne', {
+    image: atomName
+  }).then(function(atom) {
+    //writeStream.write('Got atom');
+    if(atom && atom.instanceId) {
+      return Q.nfcall(exec, 'aws ec2 start-instances --instance-ids "' + atom.instanceId + '"')
+      .then(function(output) {
+        //writeStream.write('got ' + newInstanceId + ',' + newIp);
+        return Queue.emitWithResponse({
+          event: 'startInstance',
+          ipAddress: atom.ipAddress,
+          name: atomName,
+          id: doc.id
+        }).then(function() {
+          console.log('updating atom', arguments);
+          return Q.ninvoke(atoms, 'update', {
+            _id: atom._id
+          }, {
+            $set: {
+              running: true,
+              instanceId: newInstanceId,
+              ipAddress: newIp
+            }
+          });
+        });
+      });
+    }
+  }).then(function() {
+    console.log('completing start stopped instance');
+  });
+});

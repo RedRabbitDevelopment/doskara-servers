@@ -26,9 +26,7 @@ MongoQueue.mongoConnect.then(function(db) {
       } else {
         query.domains = host;
       }
-console.log(query);
       atoms.findOne(query, function(err, atom) {
-console.log('here', err, atom);
         if(err) {
           console.log(err, err.stack);
         }
@@ -36,7 +34,12 @@ console.log('here', err, atom);
           res.statusCode = 404;
           return res.end();
         }
-        if(atom.running) return proxy.web(req, res, {target: 'http://' + atom.ipAddress});
+        if(atom.running) {
+          return proxy.web(req, res, {target: 'http://' + atom.ipAddress});
+        }
+        MongoQueue.emit('startStoppedInstance', {
+          name: atom.image
+        });
         fs.createReadStream(__dirname + '/index.html').pipe(res);
       });
     }

@@ -8,6 +8,11 @@ var Q = require('q');
 var os = require('os');
 var exec = require('child_process').exec;
 
+logger.log('initializing iptables');
+var command = 'sudo iptables -A INPUT -p tcp --dport 80 -j LOG ' +
+  '--log-prefix="DOSKARA-APP-REQUEST" -m limit --limit 1/m';
+exec(command, logger.log.bind(logger, 'iptablesErr'));
+
 logger.log('connecting to database');
 Queue.mongoConnect.then(function(db) {
   logger.log('connected to the database');
@@ -45,29 +50,7 @@ Queue.mongoConnect.then(function(db) {
     }
   }).then(function(atom) {
     if(atom && atom._id) {
-      Queue.on({
-        event: 'stopInstance',
-        atomId: atom._id
-      }, function(request) {
-        return Q.ninvoke(atoms, 'update', {
-          _id: atom._id,
-          ipAddress: ipAddress
-        }, {
-          $set: {
-            running: false
-          }
-        }).then(function() {
-          return shutdown(); 
-        });
-      });
-      return Q.ninvoke(atoms, 'update', {
-        _id: atom._id,
-        ipAddress: ipAddress
-      }, {
-        $set: {
-          running: true
-        }
-      });
+      waitForShutdown(atom);
     }
   });
 }).catch(function(err) {
@@ -76,11 +59,42 @@ Queue.mongoConnect.then(function(db) {
   console.log('success!');
 });
 
+var oneHour = 1000 * 60 * 60;
+var fifteenMinutes = oneHour / 4;
+oneHour = 1000 * 60 * 3;
+fifteenMinutes = oneHour / 3;
+function watchForShutdown(atom) {
+  // Check every fifteen minutes
+  setInterval(function() {
+    return Q.nfcall(exec, 'grep "DOSKARA-APP-REQUEST" /var/log/syslog | tail -n 1')
+    .spread(function(stdout, stderr) {
+      if(stdout) {
+        var now = new Date();
+        stdout = stdout.split(' ');
+        stdout.splice(1, 0, now.getFullYear());
+        var occurrence = new Date(stdout.slice(0, 4).join(' '));
+        var diff = now.getTime() - occurrence.getTime();
+        if(diff > oneHour) {
+          return Q.ninvoke(atoms, 'update', {
+            _id: atom._id,
+            ipAddress: ipAddress
+          }, {
+            $set: {
+              running: false
+            }
+          }).then(function() {
+            return shutdown(); 
+          });
+        }
+      }
+    }).done();
+  }, fifteenMinutes);
+}
 
 var running = true;
 function shutdown() {
   running = false;
-  //return Q.nfcall(exec, 'poweroff');
+  return Q.nfcall(exec, 'poweroff');
 }
 
 var remote = '10.0.0.111:5000';
