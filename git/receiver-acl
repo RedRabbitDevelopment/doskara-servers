@@ -5,6 +5,7 @@ var Q = require('q');
 var uuid = require('uuid');
 var Queue = require('../mongo-queue');
 var Logger = require('../mongo-queue/logger');
+var Analytics = require('../mongo-queue/analytics');
 var logger = new Logger('git');
 var request = require('request');
 var exec = require('child_process').exec;
@@ -46,6 +47,7 @@ console.log('booya');
         }
       }).then(function() {
         if(body.type === 'cell') {
+          analytics.log('atoms', body.id, false);
           var commitDot = isBeginning ? afterCommit : beforeCommit + '..' + afterCommit;
           return Q.nfcall(exec, 'git log --pretty=format:"%H|||%an|||%ad|||%s" --reverse ' + commitDot)
           .then(function(commits) {
@@ -73,6 +75,7 @@ console.log('booya');
               body.id + ' to publish your app!');
           });
         } else if(body.type === 'application') {
+          analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
           var filename = uuid.v4() + '.tar'
           logger.log('FileUpload', filename);

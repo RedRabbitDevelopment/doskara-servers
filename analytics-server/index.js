@@ -6,7 +6,7 @@ var Q = require('q');
 var analytics = require('../mongo-queue/analytics');
 var app = express();
 
-var authToken = process.env.AUTH_TOKEN;
+var authToken = process.env.AUTH_TOKEN || 'password';
 app.use(function(req, res, next) {
   if(req.headers['auth-token'] === authToken) {
     next();
@@ -44,16 +44,19 @@ app.post('/analytics/log', bodyParser.json(), function(req, res) {
   var params = {
     type: 'isString',
     isNew: 'isBoolean',
-    id: 'isString'
+    id: 'isNumber'
   };
   params = _.mapValues(params, function(method, key) {
-    if(!req.body[key])
+    if(req.body[key] == null)
       throw new Error('MissingParam: ' + key);
     if(!_[method](req.body[key]))
       throw new Error('InvalidParam: ' + key);
     return req.body[key];
   });
-  analytics.log(params.type, params.id, params.isNew);
+  var count = req.body.count;
+  if(count && !_.isNumber(count))
+    throw new Error('InvalidParam: ' + count);
+  analytics.log(params.type, params.id, params.isNew, count);
   res.json({success: true});
 });
-app.listen(process.env.PORT || 8000);
+app.listen(process.env.PORT || 9000);

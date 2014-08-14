@@ -4,9 +4,19 @@ var Q = require('q');
 var mongo = require('./mongo');
 module.exports = {
   getCollection: mongo.getCollection.bind(mongo, 'analytics'),
-  log: function(type, id, isNew) {
+  log: function(type, id, isNew, count) {
     var month = this.getMonth();
     this.getCollection().then(function(analytics) {
+      if(count) {
+        analytics.update({
+          type: type + '-count',
+          month: month
+        }, {
+          $set: {
+            count: count
+          }
+        }, {upsert: true, w: 0});
+      }
       analytics.update({
         type: type,
         id: id,
