@@ -46,7 +46,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
       }).then(function() {
         if(body.type === 'cell') {
           analytics.log('atoms', body.id, false);
-          console.log('Got atom, saving info...');
+          console.log('Got atom, saving info... Process: ' + logger.id);
           var commitDot = isBeginning ? afterCommit : beforeCommit + '..' + afterCommit;
           return Q.nfcall(exec, 'git log --pretty=format:"%H|||%an|||%ad|||%s" --reverse ' + commitDot)
           .spread(function(commits) {
@@ -74,7 +74,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
               body.id + ' to publish your app!');
           });
         } else if(body.type === 'application') {
-          console.log('Got structure...');
+          console.log('Got structure... Process: ' + logger.id);
           analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
           var filename = uuid.v4() + '.tar'
@@ -83,11 +83,14 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
             var gs = new mongodb.GridStore(Queue.db, filename, 'w');
             return Q.ninvoke(gs, 'open');
           }).then(function(gs) {
+            logger.log('uploading the tarball');
             var stream = process.stdin.pipe(gs);
             return Q.ninvoke(stream, 'on', 'end')
             .then(function() {
+              logger('done receiving the tarball, closing');
               return Q.ninvoke(gs, 'close');
             }).then(function() {
+              logger.log('closed tarball stream');
               var id = uuid.v4();
               var readStream = Queue.getReadStream(function(message) {
                 console.log(message);
