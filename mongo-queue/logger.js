@@ -4,8 +4,9 @@ var _ = require('lodash');
 var mongo = require('./mongo');
 var uuid = require('uuid');
 var Logger = module.exports = function(name) {
-  this.processes = [];
+  this.name = name;
   this.id = uuid.v4();
+  this.processes = [];
 };
 
 Logger.prototype = {
@@ -15,7 +16,9 @@ Logger.prototype = {
     var _this = this;
     var promise = this.getCollection()
     .then(function(logs) {
-      return Q.ninvoke(logs, 'insert', {id: _this.id}, {
+      return Q.ninvoke(logs, 'insert', {
+        id: _this.id,
+        name: _this.name,
         message: args,
         date: new Date()
       });
