@@ -9,13 +9,13 @@ var mongodb = require('mongodb');
 var MongoQueue = require('../mongo-queue');
 var remote = 'warehouse:5000';
 var Logger = require('../mongo-queue/logger');
-var logger = new Logger('factory');
 var UserError = require('../mongo-queue/userError');
 
 var listener = MongoQueue.on('build', {
   maxProcessing: 1,
   timePeriod: 600000 // Ten minutes
 }, function(doc) {
+  var logger = new Logger('factory');
   logger.log('Got doc', doc);
   var imageName = remote + '/' + doc.name;
   if(doc.version) imageName += '.' + doc.version;

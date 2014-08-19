@@ -2,15 +2,10 @@
 var Q = require('q');
 var _ = require('lodash');
 var mongo = require('./mongo');
+var uuid = require('uuid');
 var Logger = module.exports = function(name) {
   this.processes = [];
-  this.idPromise = this.getCollection().then(function(logs) {
-    return Q.ninvoke(logs, 'insert', {
-      name: name
-    });
-  }).then(function(log) {
-    return log[0]._id;
-  });
+  this.id = uuid.v4();
 };
 
 Logger.prototype = {
@@ -18,12 +13,11 @@ Logger.prototype = {
   log: function() {
     var args = [].slice.call(arguments, 0);
     var _this = this;
-    var promise = Q.all([
-      this.getCollection(),
-      this.idPromise
-    ]).spread(function(logs, id) {
-      return Q.ninvoke(logs, 'update', {_id: id}, {
-        $push: {messages: args}
+    var promise = this.getCollection()
+    .then(function(logs) {
+      return Q.ninvoke(logs, 'insert', {id: _this.id}, {
+        message: args,
+        date: new Date()
       });
     }).then(function() {
       _this.processes.splice(_this.processes.indexOf(promise));

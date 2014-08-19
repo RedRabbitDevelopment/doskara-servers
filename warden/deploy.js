@@ -3,9 +3,9 @@ var Queue = require('../mongo-queue');
 var Q = require('q');
 var exec = require('child_process').exec;
 var Logger = require('../mongo-queue/logger');
-var logger = new Logger('warden');
 
 Queue.on('deploy', function(doc) {
+  var logger = new Logger('warden');
   logger.log('Got a document!', doc);
   var atomName = doc.name;
   var atoms = Queue.db.collection('atoms');
@@ -52,6 +52,8 @@ Queue.on('deploy', function(doc) {
 });
 
 Queue.on('startStoppedInstance', function(doc) {
+  var logger = new Logger('startStopped');
+  logger.log('got doc!', doc);
   var atomName = doc.name;
   var atoms = Queue.db.collection('atoms');
   //var writeStream = Queue.getWriteStream(doc.id);
