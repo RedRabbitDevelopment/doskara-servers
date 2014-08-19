@@ -15,7 +15,6 @@ Queue.on('mongoRequest', function(doc) {
     mongoConnect,
     Queue.mongoConnect
   ]).spread(function(internalDb, externalDb) {
-    Q.ninvoke(externalDb.collection('messages'), 'remove', {});
     var connections = externalDb.collection('connections');
     return Q.ninvoke(connections, 'findOne', {
       db_id: doc.db_id
