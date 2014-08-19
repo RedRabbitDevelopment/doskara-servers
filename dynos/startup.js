@@ -29,18 +29,22 @@ Queue.mongoConnect.then(function(db) {
     once: true,
     next: true
   }, function(request) {
-    gotDoc = true;
-    baseLogger.log('is a requested start', request.loggerId, request.id);
-    var logger = new Logger('dynos');
-    logger.log('got doc', request);
-    var writeStream = Queue.getWriteStream(request.id);
-    writeStream.write('Dyno running! Building services...');
-    return buildContainer(request.name)
-    .then(function() {
-      writeStream.write('Services built and running!');
-      logger.write('Services built and running!');
-      return true;
-    });
+    if(request) {
+      gotDoc = true;
+      baseLogger.log('is a requested start', request.loggerId, request.id);
+      var logger = new Logger('dynos');
+      logger.log('got doc', request);
+      var writeStream = Queue.getWriteStream(request.id);
+      writeStream.write('Dyno running! Building services...');
+console.log('started');
+      return buildContainer(request.name)
+      .then(function() {
+console.log('services built and running');
+        writeStream.write('Services built and running!');
+        logger.write('Services built and running!');
+        return true;
+      });
+    }
   });
   return Q.all([
     listener.finishPromise,
