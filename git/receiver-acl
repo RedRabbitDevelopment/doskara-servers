@@ -84,8 +84,8 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
             return Q.ninvoke(gs, 'open');
           }).then(function(gs) {
             logger.log('uploading the tarball');
-            var stream = process.stdin.pipe(gs);
-            return Q.ninvoke(stream, 'on', 'end')
+            process.stdin.pipe(gs);
+            return Q.ninvoke(process.stdin, 'on', 'end')
             .then(function() {
               logger('done receiving the tarball, closing');
               return Q.ninvoke(gs, 'close');
