@@ -14,11 +14,7 @@ Queue.on('deploy', function(doc) {
     image: atomName
   }).then(function(atom) {
     writeStream.write('Deploying aws ec2 instance');
-<<<<<<< HEAD
     return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-cb2d69fb --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
-=======
-    return Q.nfcall(exec, 'aws ec2 run-instances --image-id ami-152d6925 --security-group-ids sg-00810465 --instance-type t2.micro --subnet-id subnet-03739e66 --output text --query "Instances[*].[InstanceId,PrivateIpAddress]"')
->>>>>>> 385ad5d1fa7db2a5f00de073623290c847c0bcd8
     .then(function(output) {
       output = output[0].split('\t');
       var newInstanceId = output[0];
