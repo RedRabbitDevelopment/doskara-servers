@@ -5,7 +5,7 @@ var Q = require('q');
 var uuid = require('uuid');
 var Queue = require('../mongo-queue');
 var Logger = require('../mongo-queue/logger');
-var Analytics = require('../mongo-queue/analytics');
+var analytics = require('../mongo-queue/analytics');
 var logger = new Logger('git');
 var request = require('request');
 var exec = require('child_process').exec;
@@ -49,7 +49,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
           console.log('Got atom, saving info...');
           var commitDot = isBeginning ? afterCommit : beforeCommit + '..' + afterCommit;
           return Q.nfcall(exec, 'git log --pretty=format:"%H|||%an|||%ad|||%s" --reverse ' + commitDot)
-          .then(function(commits) {
+          .spread(function(commits) {
             commits = commits.split('\n').map(function(commit) {
               var commitData = commits.split('|||');
               return {
