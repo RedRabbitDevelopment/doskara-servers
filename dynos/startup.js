@@ -41,7 +41,7 @@ console.log('started');
       .then(function() {
 console.log('services built and running');
         writeStream.write('Services built and running!');
-        logger.write('Services built and running!');
+        logger.log('Services built and running!');
         return true;
       });
     }
@@ -132,8 +132,11 @@ function buildContainer(atomName, version, namespace) {
         dependencies[depName] = container;
       });
     });
+console.log('pulling', 'docker pull "' + remoteName + '"');
     var pullPromise = Q.nfcall(exec, 'docker pull "' + remoteName + '"');
-    var removePromise = Q.nfcall(exec, 'docker rm "' + containerName + '"').catch(function() {}); // Ignore error
+    var removePromise = Q.nfcall(exec, 'docker stop "' + containerName + '"')
+    .then(function() { return Q.nfcall(exec, 'docker rm "' + containerName + '"'); })
+    .catch(function() {console.log('bbb', arguments);}); // Ignore error
     var mongoPromise = null;
     if(atom.usesMongo) {
       mongoPromise = Queue.emitWithResponse({
@@ -157,6 +160,7 @@ function buildContainer(atomName, version, namespace) {
         pullPromise,
         removePromise
       ]).spread(function(mongoResponse) {
+console.log('after removed');
         var environmentVariables = {};
         if(mongoResponse) {
           environmentVariables.MONGO_URL = mongoResponse.mongoUrl;
