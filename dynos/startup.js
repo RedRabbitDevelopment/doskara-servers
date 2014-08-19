@@ -3,49 +3,59 @@
 //  throw new Error('must be root');
 var _ = require('lodash');
 var Queue = require('../mongo-queue');
-var logger = new (require('../mongo-queue/logger'))('dyno');
+var Logger = require('../mongo-queue/logger');
+var baseLogger = new Logger('dynos-base');
 var Q = require('q');
 var os = require('os');
 var exec = require('child_process').exec;
 
-logger.log('initializing iptables');
+baseLogger.log('initializing iptables');
 var command = 'sudo iptables -A INPUT -p tcp --dport 80 -j LOG ' +
   '--log-prefix="DOSKARA-APP-REQUEST" -m limit --limit 1/m';
-exec(command, logger.log.bind(logger, 'iptablesErr'));
+exec(command, baseLogger.log.bind(logger, 'iptablesErr'));
 
-logger.log('connecting to database');
+baseLogger.log('connecting to database');
 Queue.mongoConnect.then(function(db) {
-  logger.log('connected to the database');
+  baseLogger.log('connected to the database');
   var atoms = db.collection('atoms');
   var ipAddress = os.networkInterfaces().eth0[0].address;
-  logger.log('searching for startInstance request');
-  logger.log('ipAddress', ipAddress);
+  baseLogger.log('searching for startInstance request');
+  baseLogger.log('ipAddress', ipAddress);
+  var gotDoc = false;
+  var listener = Queue.on({
+    event: 'startInstance',
+    ipAddress: ipAddress
+  }, {
+    once: true,
+    next: true
+  }, function(request) {
+    gotDoc = true;
+    baseLogger.log('is a requested start', request.loggerId, request.id);
+    var logger = new Logger('dynos');
+    logger.log('got doc', request);
+    var writeStream = Queue.getWriteStream(request.id);
+    writeStream.write('Dyno running! Building services...');
+    return buildContainer(request.name)
+    .then(function() {
+      writeStream.write('Services built and running!');
+      logger.write('Services built and running!');
+      return true;
+    });
+  });
   return Q.all([
-    Queue.next({
-      event: 'startInstance',
-      ipAddress: ipAddress
-    }, {
-      once: true
-    }),
+    listener.finishPromise,
     Q.ninvoke(atoms, 'findOne', {
       ipAddress: ipAddress
     })
   ]).spread(function(request, atom) {
     // Note: atom may not be set because it could still be pointing at the old instance!
-    if(request) {
-      logger.log('got doc', request);
-      var writeStream = Queue.getWriteStream(request.id);
-      writeStream.write('Dyno running! Building services...');
-      return buildContainer(request.name)
-      .then(function() {
-        writeStream.write('Services built and running!');
-        return true;
-      });
-    } else if(atom) {
-      logger.log('restarting shut down atom', atom._id);
-      return buildContainer(atom.image);
-    } else {
-      logger.log('no doc found, shutting down');
+    if(!gotDoc) {
+      if(atom) {
+        baseLogger.log('restarting shut down atom', atom._id);
+        return buildContainer(atom.image);
+      } else {
+        baseLogger.log('no doc found, shutting down');
+      }
     }
   }).then(function(atom) {
     if(atom && atom._id) {
@@ -53,9 +63,9 @@ Queue.mongoConnect.then(function(db) {
     }
   });
 }).catch(function(err) {
-  logger.log('got error', err, err.stack);
+  baseLogger.log('got error', err, err.stack);
 }).then(function() {
-  logger.log('success!');
+  baseLogger.log('success!');
 });
 
 var oneHour = 1000 * 60 * 60;
@@ -108,10 +118,10 @@ function buildContainer(atomName, version, namespace) {
   var atoms = Queue.db.collection('atoms');
   var containerName = namespace + atomName;
   var childrenNamespace = containerName + '.'
-  logger.log(query);
+  baseLogger.log(query);
   return Q.ninvoke(atoms, 'findOne', query)
   .then(function(atom) {
-    logger.log('got atom', atom);
+    baseLogger.log('got atom', atom);
     var dependencies = {};
     var promises = _.map(atom.config && atom.config.dependencies || {}, function(depVersion, depName) {
       return buildContainer(depName, depVersion, childrenNamespace).then(function(container) {
@@ -128,7 +138,7 @@ function buildContainer(atomName, version, namespace) {
       });
     }
     return Q.all(_.values(promises)).then(function() {
-      logger.log(' got ' + atom.image + ' dependencies');
+      baseLogger.log(' got ' + atom.image + ' dependencies');
       var links = Object.keys(dependencies).map(function(key) {
         return ['--link ', childrenNamespace + key, ':', key].join('');
       }).join(' ') + ' ';
@@ -137,7 +147,7 @@ function buildContainer(atomName, version, namespace) {
         ports = '-p 80:80 ';
       else
         ports = '';
-      logger.log('docker pulling ' + remoteName);
+      baseLogger.log('docker pulling ' + remoteName);
       return Q.all([
         mongoPromise,
         pullPromise,
@@ -150,10 +160,10 @@ function buildContainer(atomName, version, namespace) {
         environmentVariables = _.map(environmentVariables, function(value, key) {
           return ['-e ', key, '=', value].join('');
         }).join(' ') + ' ';
-        logger.log('pulled', atom.image, 'and running');
+        baseLogger.log('pulled', atom.image, 'and running');
         return Q.nfcall(exec, 'docker run -d --name "' + containerName + '" ' + environmentVariables + ports + links + '"' + remoteName + '" /bin/bash -c "/start web"');
       }).spread(function(stdout) {
-        logger.log('built docker', atom.image, stdout);
+        baseLogger.log('built docker', atom.image, stdout);
         return atom;
       });
     });

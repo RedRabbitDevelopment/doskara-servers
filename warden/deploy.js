@@ -25,6 +25,7 @@ Queue.on('deploy', function(doc) {
       return Queue.emitWithResponse({
         event: 'startInstance',
         ipAddress: newIp,
+        loggerId: logger.id,
         name: atomName,
         id: doc.id
       }).then(function() {
