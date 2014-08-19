@@ -87,7 +87,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
             process.stdin.pipe(gs);
             return Q.ninvoke(process.stdin, 'on', 'end')
             .then(function() {
-              logger('done receiving the tarball, closing');
+              logger.log('done receiving the tarball, closing');
               return Q.ninvoke(gs, 'close');
             }).then(function() {
               logger.log('closed tarball stream');
@@ -102,6 +102,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
                 name: atomName,
                 id: readStream.streamId,
                 version: '',
+                loggerId: logger.id,
                 filename: filename
               }).then(function() {
                 console.log('Build successful! Deploying dyno...');
@@ -109,6 +110,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
                 return Queue.emitWithResponse({
                   event: 'deploy',
                   name: atomName,
+                  loggerId: logger.id,
                   id: readStream.streamId
                 }).then(function() {
                   readStream.stop();
