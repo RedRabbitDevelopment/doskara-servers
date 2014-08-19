@@ -15,7 +15,7 @@ var listener = MongoQueue.on('build', {
   maxProcessing: 1,
   timePeriod: 600000 // Ten minutes
 }, function(doc) {
-  var logger = new Logger('factory');
+  var logger = new Logger('factory', doc.loggerId);
   logger.log('Got doc', doc);
   var imageName = remote + '/' + doc.name;
   if(doc.version) imageName += '.' + doc.version;

@@ -3,9 +3,9 @@ var Q = require('q');
 var _ = require('lodash');
 var mongo = require('./mongo');
 var uuid = require('uuid');
-var Logger = module.exports = function(name) {
+var Logger = module.exports = function(name, id) {
   this.name = name;
-  this.id = uuid.v4();
+  this.id = id || uuid.v4();
   this.processes = [];
 };
 

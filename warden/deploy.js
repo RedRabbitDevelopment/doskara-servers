@@ -5,7 +5,7 @@ var exec = require('child_process').exec;
 var Logger = require('../mongo-queue/logger');
 
 Queue.on('deploy', function(doc) {
-  var logger = new Logger('warden');
+  var logger = new Logger('warden', doc.loggerId);
   logger.log('Got a document!', doc);
   var atomName = doc.name;
   var atoms = Queue.db.collection('atoms');
