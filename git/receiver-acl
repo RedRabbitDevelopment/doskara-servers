@@ -83,10 +83,11 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
             var gs = new mongodb.GridStore(Queue.db, filename, 'w');
             return Q.ninvoke(gs, 'open');
           }).then(function(gs) {
-            process.stdin.pipe(gs);
-            return Q.ninvoke(process.stdin, 'on', 'end')
+            var stream = process.stdin.pipe(gs);
+            return Q.ninvoke(stream, 'on', 'end')
             .then(function() {
-              gs.close();
+              return Q.ninvoke(gs, 'close');
+            }).then(function() {
               var id = uuid.v4();
               var readStream = Queue.getReadStream(function(message) {
                 console.log(message);
