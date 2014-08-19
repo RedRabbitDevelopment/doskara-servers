@@ -12,7 +12,7 @@ var exec = require('child_process').exec;
 baseLogger.log('initializing iptables');
 var command = 'sudo iptables -A INPUT -p tcp --dport 80 -j LOG ' +
   '--log-prefix="DOSKARA-APP-REQUEST" -m limit --limit 1/m';
-exec(command, baseLogger.log.bind(logger, 'iptablesErr'));
+exec(command, baseLogger.log.bind(baseLogger, 'iptablesErr'));
 
 baseLogger.log('connecting to database');
 Queue.mongoConnect.then(function(db) {
