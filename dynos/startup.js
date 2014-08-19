@@ -35,18 +35,17 @@ Queue.mongoConnect.then(function(db) {
     if(request) {
       logger.log('got doc', request);
       var writeStream = Queue.getWriteStream(request.id);
-      writeStream.write('got doc!');
+      writeStream.write('Dyno running! Building services...');
       return buildContainer(request.name)
       .then(function() {
+        writeStream.write('Services built and running!');
         return true;
       });
     } else if(atom) {
-      console.log('here you are!', atom, atom.name);
       logger.log('restarting shut down atom', atom._id);
       return buildContainer(atom.image);
     } else {
       logger.log('no doc found, shutting down');
-      return shutdown();
     }
   }).then(function(atom) {
     if(atom && atom._id) {
@@ -54,9 +53,9 @@ Queue.mongoConnect.then(function(db) {
     }
   });
 }).catch(function(err) {
-  console.log('got error', err, err.stack);
+  logger.log('got error', err, err.stack);
 }).then(function() {
-  console.log('success!');
+  logger.log('success!');
 });
 
 var oneHour = 1000 * 60 * 60;
@@ -109,10 +108,10 @@ function buildContainer(atomName, version, namespace) {
   var atoms = Queue.db.collection('atoms');
   var containerName = namespace + atomName;
   var childrenNamespace = containerName + '.'
-  console.log(query);
+  logger.log(query);
   return Q.ninvoke(atoms, 'findOne', query)
   .then(function(atom) {
-    console.log('got atom', atom);
+    logger.log('got atom', atom);
     var dependencies = {};
     var promises = _.map(atom.config && atom.config.dependencies || {}, function(depVersion, depName) {
       return buildContainer(depName, depVersion, childrenNamespace).then(function(container) {
@@ -129,7 +128,7 @@ function buildContainer(atomName, version, namespace) {
       });
     }
     return Q.all(_.values(promises)).then(function() {
-      console.log(' got ' + atom.image + ' dependencies');
+      logger.log(' got ' + atom.image + ' dependencies');
       var links = Object.keys(dependencies).map(function(key) {
         return ['--link ', childrenNamespace + key, ':', key].join('');
       }).join(' ') + ' ';
@@ -138,7 +137,7 @@ function buildContainer(atomName, version, namespace) {
         ports = '-p 80:80 ';
       else
         ports = '';
-      console.log('docker pulling ' + remoteName);
+      logger.log('docker pulling ' + remoteName);
       return Q.all([
         mongoPromise,
         pullPromise,
@@ -151,10 +150,10 @@ function buildContainer(atomName, version, namespace) {
         environmentVariables = _.map(environmentVariables, function(value, key) {
           return ['-e ', key, '=', value].join('');
         }).join(' ') + ' ';
-        console.log('pulled', atom.image, 'and running');
+        logger.log('pulled', atom.image, 'and running');
         return Q.nfcall(exec, 'docker run -d --name "' + containerName + '" ' + environmentVariables + ports + links + '"' + remoteName + '" /bin/bash -c "/start web"');
       }).spread(function(stdout) {
-        console.log('built docker', atom.image, stdout);
+        logger.log('built docker', atom.image, stdout);
         return atom;
       });
     });

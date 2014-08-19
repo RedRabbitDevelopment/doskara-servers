@@ -29,11 +29,9 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
 }).spread(function(response, body) {
   logger.log('Body', body);
   var body = JSON.parse(body);
-console.log('bb', body);
   if(body.success) {
     logger.log('BodySuccess', body);
     if(command === 'write') {
-console.log('booya');
       // Check if non-fast forward
       var isBeginning = beforeCommit === _.times(40, function() { return '0'; }).join('');
       return Q.fcall(function() {
@@ -48,6 +46,7 @@ console.log('booya');
       }).then(function() {
         if(body.type === 'cell') {
           analytics.log('atoms', body.id, false);
+          console.log('Got atom, saving info...');
           var commitDot = isBeginning ? afterCommit : beforeCommit + '..' + afterCommit;
           return Q.nfcall(exec, 'git log --pretty=format:"%H|||%an|||%ad|||%s" --reverse ' + commitDot)
           .spread(function(commits) {
@@ -75,6 +74,7 @@ console.log('booya');
               body.id + ' to publish your app!');
           });
         } else if(body.type === 'application') {
+          console.log('Got structure...');
           analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
           var filename = uuid.v4() + '.tar'
@@ -91,7 +91,7 @@ console.log('booya');
               var readStream = Queue.getReadStream(function(message) {
                 console.log(message);
               });
-console.log('Emitting build');
+              console.log('Sending to factory...');
               logger.log('BuildEmit');
               return Queue.emitWithResponse({
                 event: 'build',
@@ -100,14 +100,13 @@ console.log('Emitting build');
                 version: '',
                 filename: filename
               }).then(function() {
-console.log('emitting deploy');
+                console.log('Build successful! Deploying dyno...');
                 logger.log('DeployEmit');
                 return Queue.emitWithResponse({
                   event: 'deploy',
                   name: atomName,
                   id: readStream.streamId
                 }).then(function() {
-console.log('deploy done');
                   readStream.stop();
                   logger.log('Success');
                   console.log('Success! Now you can view your app at https://' +
@@ -124,7 +123,7 @@ console.log('deploy done');
     throw new Error(body.error);
   }
 }).catch(function(err) {
-  console.log(err, err.stack);
+  if(command === 'write') console.log(err, err.stack);
   logger.log('End Error', err, err.stack);
   return 1;
 }).then(function(code) {

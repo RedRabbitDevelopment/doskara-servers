@@ -8,12 +8,15 @@ var exec = cp.exec;
 var mongodb = require('mongodb');
 var MongoQueue = require('../mongo-queue');
 var remote = 'warehouse:5000';
+var Logger = require('../mongo-queue/logger');
+var logger = new Logger('factory');
+var UserError = require('../mongo-queue/userError');
 
 var listener = MongoQueue.on('build', {
   maxProcessing: 1,
   timePeriod: 600000 // Ten minutes
 }, function(doc) {
-  console.log('got ', doc);
+  logger.log('Got doc', doc);
   var imageName = remote + '/' + doc.name;
   if(doc.version) imageName += '.' + doc.version;
   var mongoStream = MongoQueue.getWriteStream(doc.id);
@@ -22,10 +25,12 @@ var listener = MongoQueue.on('build', {
     var gs = new mongodb.GridStore(MongoQueue.db, doc.filename, 'r');
     return Q.ninvoke(gs, 'open');
   }).then(function(gs) {
-    console.log('piping');
+    logger.log('piping output of docker build');
     var child = spawn('docker', ['run', '-i', '-a', 'stdin', 'progrium/buildstep', '/bin/bash', '-c', 'mkdir -p /app && tar -xC /app && /build/builder']);
     gs.stream(true).pipe(child.stdin).on('error', console.log.bind(console, 'bad'));
-    child.stderr.pipe(process.stdout);
+    child.stderr.on('data', function(chunk) {
+      logger.log('Docker build error', chunk.toString());
+    });
     var chunks = [];
     var result = null;
     child.stdout.on('data', function(chunk) {
@@ -35,24 +40,25 @@ var listener = MongoQueue.on('build', {
       result = chunks.join('').replace('\n', '');
     });
     return makePromise(child)
-    .then(function() { console.log(arguments); return result; });
+    .then(function() { mongoStream.write('build result', JSON.stringify(arguments)); return result; });
   }).then(function(id) {
-    console.log('attaching', id);
+    logger.log('attaching to building container', id);
     var attachProcess = spawn('docker', ['attach', id]);
     attachProcess.stdout.pipe(through2(function(chunk, enc, cb) {
       mongoStream.write(chunk.toString());
       cb();
     }));
     attachProcess.stderr.pipe(through2(function(chunk, enc, cb) {
+      // TODO: don't output error to end user
       mongoStream.write(chunk.toString());
       cb();
     }));
-    console.log('waiting', id);
+    logger.log('waiting for', id);
     var waitChild = spawn('docker', ['wait', id]);
     return makePromise(waitChild)
     .then(function() {
       attachProcess.kill();
-      console.log('commiting', id, imageName);
+      logger.log('commiting', id, imageName);
       var child = spawn('docker', ['commit', id, imageName]);
       return makePromise(child);
     }).then(function() {
@@ -70,8 +76,11 @@ var listener = MongoQueue.on('build', {
         });
       });
     }).then(function(configFile) {
+      if(!configFile) {
+        throw new UserError('Failed to find config file.');
+      }
       mongoStream.write('Using ' + configFile);
-      console.log('catting', configFile);
+      logger.log('catting', configFile);
       var child = spawn('docker', ['run', '--rm', imageName, 'cat', '/app/' + configFile]);
       var chunks = [];
       var result = '';
@@ -81,11 +90,13 @@ var listener = MongoQueue.on('build', {
       child.stdout.on('end', function() { result = chunks.join(''); });
       return Q.ninvoke(child, 'on', 'close').then(function() { return result; })
       .then(function(result) {
-        console.log('got result', result);
-        return JSON.parse(result);
+        try {
+          return JSON.parse(result);
+        } catch(e) {
+          throw new UserError('Couldn\'t read config file. (Improper JSON).');
+        }
       });
     }).then(function(contents) {
-      console.log('contents', contents);
       var atoms = MongoQueue.db.collection('atoms');
       return Q.ninvoke(atoms, 'update', {
         image: doc.name,
@@ -94,22 +105,23 @@ var listener = MongoQueue.on('build', {
         $set: { config: contents }
       }, {upsert: true});
     }).then(function() {
-      console.log('pushing');
+      logger.log('pushing');
       mongoStream.write('Pushing to docker repository');
       var child = spawn('docker', ['push', imageName]);
       return makePromise(child);
     });
   }).finally(function() {
-    console.log('cleaning');
+    logger.log('cleaning');
     mongoStream.write('cleaning');
-    console.log('docker rm "' + imageName + '"');
+    logger.log('docker rm "' + imageName + '"');
     Q.nfcall(exec, 'docker rm $(docker ps -a -q)')
     .then(function() {
-console.log('docker rmi "' + imageName + '"');
+      logger.log('docker rmi "' + imageName + '"');
       return Q.nfcall(exec, 'docker rmi "' + imageName + '"');
     });
   }).then(function() {
-    console.log('done!');
+    mongoStream.write('Done building application');
+    logger.log('done!');
   });
 });
 
