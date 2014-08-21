@@ -13,6 +13,24 @@ var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
 });
 module.exports = MongoQueue = {
   mongoConnect: mongoConnect,
+  uploadFile: function(inputStream, logger) {
+    var filename = uuid.v4() + '.tar'
+    logger.log('FileUpload', filename);
+    var gs;
+    return Queue.mongoConnect.then(function() {
+      gs = new mongodb.GridStore(Queue.db, filename, 'w');
+      return Q.ninvoke(gs, 'open');
+    }).then(function(gs) {
+      logger.log('uploading the tarball');
+      inputStream.pipe(gs);
+      return Q.ninvoke(inputStream, 'on', 'end');
+    }).then(function() {
+      logger.log('done receiving the tarball, closing');
+      return Q.ninvoke(gs, 'close');
+    }).then(function() {
+      logger.log('closed tarball stream');
+    });
+  },
   getCollection: function(collection) {
     collection = collection || 'messages';
     return mongoConnect.then(function(db) {
