@@ -77,7 +77,7 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
           console.log('Got structure... Process: ' + logger.id);
           analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
-          return Queue.uploadFile(process.stdin, logger).then(function(gs, filename) {
+          return Queue.uploadFile(process.stdin, logger).then(function(filename) {
             var readStream = Queue.getReadStream(function(message) {
               console.log(message);
             });
