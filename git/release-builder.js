@@ -20,12 +20,14 @@ console.log('got doc', doc);
     var gzipProcess = spawn('gzip', [], {
       stdio: [archiveProcess.stdout, 'pipe', process.stderr]
     });
-    gzipProcess.stdout.pipe(writeStream);
+    gzipProcess.stdout
+.pipe(require('through2')(function(chunk, enc, cb) { console.log('here', chunk); writeStream.write(chunk, cb.bind(undefined, undefined, undefined)); }))
     archiveProcess.on('error', console.log.bind(console, 'archiveE'));
     gzipProcess.on('error', console.log.bind(console, 'gzipE'));
 writeStream.on('error', console.log.bind(console, 'writeStreamE'));
     return Q.ninvoke(gzipProcess, 'on', 'close').then(function() {
       return Q.ninvoke(writeStream, 'close');
+return d.promise;
     }).then(function() {
       return filename;
     });
@@ -42,7 +44,7 @@ writeStream.on('error', console.log.bind(console, 'writeStreamE'));
     return Queue.emitWithResponse({
       event: 'build',
       name: doc.atomName,
-      id: readStream.id,
+      id: readStream.streamId,
       version: doc.version,
       loggerId: logger.id,
       filename: filename

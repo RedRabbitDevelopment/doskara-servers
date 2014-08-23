@@ -14,7 +14,7 @@ var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
 module.exports = MongoQueue = {
   mongoConnect: mongoConnect,
   getFileUploadStream: function(logger) {
-    var filename = uuid.v4() + '.tar'
+    var filename = uuid.v4() + '.tar.gz'
     logger.log('FileUpload', filename);
     console.log('uploading a large file');
     var gs;
