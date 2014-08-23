@@ -77,7 +77,19 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
           console.log('Got structure... Process: ' + logger.id);
           analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
-          return Queue.uploadFile(process.stdin, logger).then(function(filename) {
+          return Queue.getFileUploadStream(logger).spread(function(writeStream, filename) {
+            var gzipProcess = spawn('gzip', [], {
+              stdio: [process.stdin, 'pipe', process.stderr]
+            });
+            zipProcess.stdout
+            .pipe(require('through2')(function(chunk, enc, cb) { writeStream.write(chunk, function() { cb(); }); }));
+            gzipProcess.on('error', console.log.bind(console, 'gzipError'));
+            return Q.ninvoke(gzipProcess, 'on', 'close').then(function() {
+              return Q.ninoke(writeStream, 'close');
+            }).then(function() {
+              return filename;
+            });
+          }).then(function(filename) {
             var readStream = Queue.getReadStream(function(message) {
               console.log(message);
             });
