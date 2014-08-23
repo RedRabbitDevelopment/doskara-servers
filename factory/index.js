@@ -16,6 +16,7 @@ var listener = MongoQueue.on('build', {
   timePeriod: 600000 // Ten minutes
 }, function(doc) {
   var logger = new Logger('factory', doc.loggerId);
+  console.log('got', doc);
   logger.log('Got doc', doc);
   var imageName = remote + '/' + doc.name;
   if(doc.version) imageName += '.' + doc.version;
@@ -26,8 +27,10 @@ var listener = MongoQueue.on('build', {
     return Q.ninvoke(gs, 'open');
   }).then(function(gs) {
     logger.log('piping output of docker build');
-    var child = spawn('docker', ['run', '-i', '-a', 'stdin', 'progrium/buildstep', '/bin/bash', '-c', 'mkdir -p /app && tar -xC /app && /build/builder']);
-    gs.stream(true).pipe(child.stdin).on('error', console.log.bind(console, 'bad'));
+    var child = spawn('docker', ['run', '-i', '-a', 'stdin', 'progrium/buildstep', '/bin/bash', '-c', 'mkdir -p /app && tar -xzC /app && /build/builder']);
+    gs.stream(true)
+    .pipe(require('through2')(function(chunk, enc, cb) { console.log(chunk); this.push(chunk); cb(); }))
+    .pipe(child.stdin).on('error', console.log.bind(console, 'bad'));
     child.stderr.on('data', function(chunk) {
       logger.log('Docker build error', chunk.toString());
     });
@@ -43,7 +46,8 @@ var listener = MongoQueue.on('build', {
     .then(function() { mongoStream.write('build result', JSON.stringify(arguments)); return result; });
   }).then(function(id) {
     logger.log('attaching to building container', id);
-    var attachProcess = spawn('docker', ['attach', id]);
+    console.log('attaching to building container', id);
+    var attachProcess = spawn('docker', ['logs', '-f', id]);
     attachProcess.stdout.pipe(through2(function(chunk, enc, cb) {
       mongoStream.write(chunk.toString());
       cb();
