@@ -61,7 +61,7 @@ module.exports = MongoQueue = {
     }
     var listener = MongoQueue.on({
       event: 'write-stream',
-      streamId: streamId,
+      streamId: streamId
     }, {
       timePeriod: 100,
       maxProcessing: 20,
