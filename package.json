@@ -4,15 +4,15 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "body-parser": "^1.6.3",
+    "express": "^4.8.3",
     "http-proxy": "^1.2.0",
     "lodash": "^2.4.1",
     "mongodb": "^1.4.8",
     "q": "^1.0.1",
     "request": "^2.40.0",
     "through2": "^0.5.1",
-    "uuid": "^1.4.1",
-    "express": "^4.8.3",
-    "body-parser": "^1.6.3"
+    "uuid": "^1.4.1"
   },
   "devDependencies": {
     "should": "^4.0.4"

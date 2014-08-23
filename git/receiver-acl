@@ -8,7 +8,9 @@ var Logger = require('../mongo-queue/logger');
 var analytics = require('../mongo-queue/analytics');
 var logger = new Logger('git');
 var request = require('request');
-var exec = require('child_process').exec;
+var cp = require('child_process');
+var exec = cp.exec;
+var spawn = cp.spawn;
 
 var password = 'vH$qBF{pZg(qnh8jpWzp9y[@[[D@(_%/t@j5^zMC6Wcf,vHeN!vdcN!(3m6Pj7jP';
 
@@ -77,47 +79,44 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
           console.log('Got structure... Process: ' + logger.id);
           analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
-          var filename = uuid.v4() + '.tar'
-          logger.log('FileUpload', filename);
-          return Queue.mongoConnect.then(function() {
-            var gs = new mongodb.GridStore(Queue.db, filename, 'w');
-            return Q.ninvoke(gs, 'open');
-          }).then(function(gs) {
-            logger.log('uploading the tarball');
-            process.stdin.pipe(gs);
-            return Q.ninvoke(process.stdin, 'on', 'end')
-            .then(function() {
-              logger.log('done receiving the tarball, closing');
-              return Q.ninvoke(gs, 'close');
+          return Queue.getFileUploadStream(logger).spread(function(writeStream, filename) {
+            var gzipProcess = spawn('gzip', [], {
+              stdio: [process.stdin, 'pipe', process.stderr]
+            });
+            gzipProcess.stdout
+            .pipe(require('through2')(function(chunk, enc, cb) { writeStream.write(chunk, function() { cb(); }); }));
+            gzipProcess.on('error', console.log.bind(console, 'gzipError'));
+            return Q.ninvoke(gzipProcess, 'on', 'close').then(function() {
+              return Q.ninvoke(writeStream, 'close');
             }).then(function() {
-              logger.log('closed tarball stream');
-              var id = uuid.v4();
-              var readStream = Queue.getReadStream(function(message) {
-                console.log(message);
-              });
-              console.log('Sending to factory...');
-              logger.log('BuildEmit');
+              return filename;
+            });
+          }).then(function(filename) {
+            var readStream = Queue.getReadStream(function(message) {
+              console.log(message);
+            });
+            console.log('Sending to factory...');
+            logger.log('BuildEmit');
+            return Queue.emitWithResponse({
+              event: 'build',
+              name: atomName,
+              id: readStream.streamId,
+              version: '',
+              loggerId: logger.id,
+              filename: filename
+            }).then(function() {
+              console.log('Build successful! Deploying dyno...');
+              logger.log('DeployEmit');
               return Queue.emitWithResponse({
-                event: 'build',
+                event: 'deploy',
                 name: atomName,
-                id: readStream.streamId,
-                version: '',
                 loggerId: logger.id,
-                filename: filename
+                id: readStream.streamId
               }).then(function() {
-                console.log('Build successful! Deploying dyno...');
-                logger.log('DeployEmit');
-                return Queue.emitWithResponse({
-                  event: 'deploy',
-                  name: atomName,
-                  loggerId: logger.id,
-                  id: readStream.streamId
-                }).then(function() {
-                  readStream.stop();
-                  logger.log('Success');
-                  console.log('Success! Now you can view your app at https://' +
-                    atomName + '.gateway.doskara.com!');
-                });
+                readStream.stop();
+                logger.log('Success');
+                console.log('Success! Now you can view your app at https://' +
+                  atomName + '.gateway.doskara.com!');
               });
             });
           });

@@ -13,6 +13,19 @@ var mongoConnect = Q.ninvoke(MongoClient, 'connect', URI).then(function(db) {
 });
 module.exports = MongoQueue = {
   mongoConnect: mongoConnect,
+  getFileUploadStream: function(logger) {
+    var filename = uuid.v4() + '.tar.gz'
+    logger.log('FileUpload', filename);
+    console.log('uploading a large file');
+    var gs;
+    return MongoQueue.mongoConnect.then(function() {
+      console.log('connected', filename);
+      gs = new mongodb.GridStore(MongoQueue.db, filename, 'w');
+      return Q.ninvoke(gs, 'open');
+    }).then(function(gs) {
+      return [gs, filename];
+    });
+  },
   getCollection: function(collection) {
     collection = collection || 'messages';
     return mongoConnect.then(function(db) {
@@ -43,7 +56,7 @@ module.exports = MongoQueue = {
     }
     var listener = MongoQueue.on({
       event: 'write-stream',
-      streamId: streamId,
+      streamId: streamId
     }, {
       timePeriod: 100,
       maxProcessing: 20,
