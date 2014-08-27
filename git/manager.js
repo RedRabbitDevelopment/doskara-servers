@@ -84,7 +84,7 @@ Queue.on('add-key', function(doc) {
   grepChild.on('close', def.resolve);
   return def.promise.then(function(result) {
     if(!result)
-      throw new Error('AlreadyInUse');
+      throw new UserError('AlreadyInUse');
     return Q.ninvoke(fs, 'writeFile', authorizedFile, new Buffer(entry), {flag: 'a'});
   });
 });
