@@ -67,8 +67,7 @@ return d.promise;
 
 var authorizedFile = '/home/git/.ssh/authorized_keys';
 Queue.on('add-key', function(doc) {
-  console.log('got doc', doc);
-  var entry = 'command=\"/usr/bin/gitreceive run ' + doc.username + ' ' + doc.fingerprint +
+  var entry = '\ncommand=\"/usr/bin/gitreceive run ' + doc.username + ' ' + doc.fingerprint +
     '",no-agent-forwarding,no-pty,no-user-rc,no-X11-forwarding,no-port-forwarding ' + doc.key;
   var keypart = doc.key.split(' ')[1];
   var catChild = spawn('cat', [authorizedFile], {stdio: [null, null, process.stderr]});
@@ -83,12 +82,9 @@ Queue.on('add-key', function(doc) {
   catChild.on('error', console.log.bind(console, 'bbbbbbbb'));
   var def = Q.defer();
   grepChild.on('close', def.resolve);
-  return def.promise.then(function() {
-    return result.join('');
-  }).then(function(result) {
-    console.log('got cat result', arguments);
+  return def.promise.then(function(result) {
     if(result)
-      throw new UserError('AlreadyInUse');
+      throw new Error('AlreadyInUse');
     return Q.ninvoke(fs, 'writeFile', authorizedFile, new Buffer(entry), {flag: 'a'});
   });
 });
