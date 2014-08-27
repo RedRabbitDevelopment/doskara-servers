@@ -1,4 +1,3 @@
-
 var fs = require('fs');
 var Q = require('q');
 var Queue = require('../mongo-queue');
@@ -71,27 +70,28 @@ Queue.on('add-key', function(doc) {
     '",no-agent-forwarding,no-pty,no-user-rc,no-X11-forwarding,no-port-forwarding ' + doc.key;
   var keypart = doc.key.split(' ')[1];
   var catChild = spawn('cat', [authorizedFile], {stdio: [null, null, process.stderr]});
-  var grepChild = spawn('grep', [keypart], {stdio: [catChild.stdout, null, process.stderr]});
+  var grepChild = spawn('grep', [keypart], {stdio: [null, null, process.stderr]});
+  catChild.stdout.pipe(grepChild.stdin);
   catChild.stdout.on('error', console.log.bind(console, 'gahhh'));
   grepChild.stdout.on('error', console.log.bind(console, 'bbbb'));
-  var result = [];
+  var resul = [];
   grepChild.stdout.on('data', function(chunk) {
-    result.push(chunk.toString());
+    resul.push(chunk.toString());
   });
   grepChild.on('error', console.log.bind(console, 'errrrrr'));
   catChild.on('error', console.log.bind(console, 'bbbbbbbb'));
   var def = Q.defer();
   grepChild.on('close', def.resolve);
   return def.promise.then(function(result) {
-    if(result)
+    if(!result)
       throw new Error('AlreadyInUse');
     return Q.ninvoke(fs, 'writeFile', authorizedFile, new Buffer(entry), {flag: 'a'});
   });
 });
 
 Queue.on('remove-key', function(doc) {
-  var find = 'gitreceive run ' + doc.username + ' ' + doc.fingerprint + '"';
-  return Q.nfcall(exec, 'perl -i "/' + find + '/ or print" ' + authorizedFile)
+  var find = 'gitreceive run ' + doc.username + ' ' + doc.fingerprint;
+  return Q.nfcall(exec, 'sed -i "/' + find + '/d" ' + authorizedFile)
   .then(function(result) {
     console.log('result');
   });
