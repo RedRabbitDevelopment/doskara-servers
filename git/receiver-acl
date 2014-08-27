@@ -8,7 +8,9 @@ var Logger = require('../mongo-queue/logger');
 var analytics = require('../mongo-queue/analytics');
 var logger = new Logger('git');
 var request = require('request');
-var exec = require('child_process').exec;
+var cp = require('child_process');
+var exec = cp.exec;
+var spawn = cp.spawn;
 
 var password = 'vH$qBF{pZg(qnh8jpWzp9y[@[[D@(_%/t@j5^zMC6Wcf,vHeN!vdcN!(3m6Pj7jP';
 
@@ -77,7 +79,19 @@ Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.j
           console.log('Got structure... Process: ' + logger.id);
           analytics.log('structures', body.id, false);
           var atomName = repoName.substring(0, repoName.length - '.git'.length);
-          return Queue.uploadFile(process.stdin, logger).then(function(filename) {
+          return Queue.getFileUploadStream(logger).spread(function(writeStream, filename) {
+            var gzipProcess = spawn('gzip', [], {
+              stdio: [process.stdin, 'pipe', process.stderr]
+            });
+            gzipProcess.stdout
+            .pipe(require('through2')(function(chunk, enc, cb) { writeStream.write(chunk, function() { cb(); }); }));
+            gzipProcess.on('error', console.log.bind(console, 'gzipError'));
+            return Q.ninvoke(gzipProcess, 'on', 'close').then(function() {
+              return Q.ninvoke(writeStream, 'close');
+            }).then(function() {
+              return filename;
+            });
+          }).then(function(filename) {
             var readStream = Queue.getReadStream(function(message) {
               console.log(message);
             });

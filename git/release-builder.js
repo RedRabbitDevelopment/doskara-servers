@@ -37,7 +37,8 @@ return d.promise;
   }).then(function(filename) {
     var readStream = Queue.getReadStream(function(message) {
       console.log('got message, emitting', message);
-      return Queue.emit('release-build-message', {
+      return Queue.emit({
+        event: 'release-build-message',
         user_id: doc.user_id,
         release_id: doc.release_id,
         message: message
@@ -52,7 +53,13 @@ return d.promise;
       loggerId: logger.id,
       filename: filename
     }).then(function() {
-      console.log('got build response!');
+      return Queue.emit({
+        event: 'release-build-message',
+        user_id: doc.user_id,
+        release_id: doc.release_id,
+        message: 'Build complete!',
+        isComplete: true
+      });
     });
   });
 });

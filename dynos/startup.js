@@ -9,6 +9,8 @@ var Q = require('q');
 var os = require('os');
 var exec = require('child_process').exec;
 
+console.log('starting right here what what');
+
 baseLogger.log('initializing iptables');
 var command = 'sudo iptables -A INPUT -p tcp --dport 80 -j LOG ' +
   '--log-prefix="DOSKARA-APP-REQUEST" -m limit --limit 1/m';
@@ -62,8 +64,9 @@ console.log('services built and running');
       }
     }
   }).then(function(atom) {
+console.log('hahaha', atom, atom._id);
     if(atom && atom._id) {
-      waitForShutdown(atom);
+      watchForShutdown(atom);
     }
   });
 }).catch(function(err) {
@@ -77,10 +80,12 @@ var fifteenMinutes = oneHour / 4;
 oneHour = 1000 * 60 * 3;
 fifteenMinutes = oneHour / 3;
 function watchForShutdown(atom) {
+console.log('checking for shutdown');
   // Check every fifteen minutes
   setInterval(function() {
     return Q.nfcall(exec, 'grep "DOSKARA-APP-REQUEST" /var/log/syslog | tail -n 1')
     .spread(function(stdout, stderr) {
+console.log('booya', stdout);
       if(stdout) {
         var now = new Date();
         stdout = stdout.split(' ');
