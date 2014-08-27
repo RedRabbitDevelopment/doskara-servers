@@ -1,4 +1,5 @@
 
+var fs = require('fs');
 var Q = require('q');
 var Queue = require('../mongo-queue');
 var Logger = require('../mongo-queue/logger');
@@ -64,24 +65,37 @@ return d.promise;
   });
 });
 
-var authorizedFile = '~/.ssh/authorized_keys';
+var authorizedFile = '/home/git/.ssh/authorized_keys';
 Queue.on('add-key', function(doc) {
+  console.log('got doc', doc);
   var entry = 'command=\"/usr/bin/gitreceive run ' + doc.username + ' ' + doc.fingerprint +
     '",no-agent-forwarding,no-pty,no-user-rc,no-X11-forwarding,no-port-forwarding ' + doc.key;
   var keypart = doc.key.split(' ')[1];
-  return Q.npost(exec, 'cat ' + authorizedFile + ' | grep "' + keypart + '"')
-  .spread(function(result) {
+  var catChild = spawn('cat', [authorizedFile], {stdio: [null, null, process.stderr]});
+  var grepChild = spawn('grep', [keypart], {stdio: [catChild.stdout, null, process.stderr]});
+  catChild.stdout.on('error', console.log.bind(console, 'gahhh'));
+  grepChild.stdout.on('error', console.log.bind(console, 'bbbb'));
+  var result = [];
+  grepChild.stdout.on('data', function(chunk) {
+    result.push(chunk.toString());
+  });
+  grepChild.on('error', console.log.bind(console, 'errrrrr'));
+  catChild.on('error', console.log.bind(console, 'bbbbbbbb'));
+  var def = Q.defer();
+  grepChild.on('close', def.resolve);
+  return def.promise.then(function() {
+    return result.join('');
+  }).then(function(result) {
+    console.log('got cat result', arguments);
     if(result)
       throw new UserError('AlreadyInUse');
-    return Q.ninvoke(fs, 'open', 'a');
-  }).then(function(fd) {
-    return Q.ninvoke(fd, 'write', authorizedFile, new Buffer(entry));
+    return Q.ninvoke(fs, 'writeFile', authorizedFile, new Buffer(entry), {flag: 'a'});
   });
 });
 
 Queue.on('remove-key', function(doc) {
   var find = 'gitreceive run ' + doc.username + ' ' + doc.fingerprint + '"';
-  return Q.npost(exec, 'perl -i "/' + find + '/ or print" ' + authorizedFile)
+  return Q.nfcall(exec, 'perl -i "/' + find + '/ or print" ' + authorizedFile)
   .then(function(result) {
     console.log('result');
   });
