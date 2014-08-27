@@ -3,7 +3,10 @@ var Q = require('q');
 var Queue = require('../mongo-queue');
 var Logger = require('../mongo-queue/logger');
 var uuid = require('uuid');
-var spawn = require('child_process').spawn;
+var cp = require('child_process');
+var spawn = cp.spawn;
+var exec = cp.exec;
+var UserError = require('../mongo-queue/userError');
 
 // var doc = {commit: 'e0fd2106b81e8ea46c0aefb75081cbab0c1b6611', username: 'data_store'};
 // var archiveProcess = spawn('git', ['archive', doc.commit], {cwd: '/home/git/' + doc.username + '.git'});
@@ -51,5 +54,28 @@ return d.promise;
     }).then(function() {
       console.log('got build response!');
     });
+  });
+});
+
+var authorizedFile = '~/.ssh/authorized_keys';
+Queue.on('add-key', function(doc) {
+  var entry = 'command=\"/usr/bin/gitreceive run ' + doc.username + ' ' + doc.fingerprint +
+    '",no-agent-forwarding,no-pty,no-user-rc,no-X11-forwarding,no-port-forwarding ' + doc.key;
+  var keypart = doc.key.split(' ')[1];
+  return Q.npost(exec, 'cat ' + authorizedFile + ' | grep "' + keypart + '"')
+  .spread(function(result) {
+    if(result)
+      throw new UserError('AlreadyInUse');
+    return Q.ninvoke(fs, 'open', 'a');
+  }).then(function(fd) {
+    return Q.ninvoke(fd, 'write', authorizedFile, new Buffer(entry));
+  });
+});
+
+Queue.on('remove-key', function(doc) {
+  var find = 'gitreceive run ' + doc.username + ' ' + doc.fingerprint + '"';
+  return Q.npost(exec, 'perl -i "/' + find + '/ or print" ' + authorizedFile)
+  .then(function(result) {
+    console.log('result');
   });
 });
