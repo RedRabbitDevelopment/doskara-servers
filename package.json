@@ -15,7 +15,9 @@
     "uuid": "^1.4.1"
   },
   "devDependencies": {
-    "should": "^4.0.4"
+    "proxyquire": "^1.0.1",
+    "should": "^4.0.4",
+    "sinon": "^1.10.3"
   },
   "scripts": {
     "start": "node analytics-server/index.js",
