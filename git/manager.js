@@ -15,7 +15,7 @@ var UserError = require('../mongo-queue/userError');
 // gzipProcess.stdout.pipe(process.stdout);
 
 Queue.on('build-release', function(doc) {
-console.log('got doc', doc);
+  console.log('got doc', doc);
   var logger = new Logger('build-release');
   logger.log('building', doc.release_id);
   return Queue.getFileUploadStream(logger).spread(function(writeStream, filename) {
