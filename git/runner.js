@@ -43,7 +43,7 @@ Runner.prototype = {
   },
   getRepoInfo: function(repoName, username) {
     var _this = this;
-    return Q.ninvoke(request, 'post', 'https://doskara.herokuapp.com/repositories/canpush.json', {
+    return Q.ninvoke(request, 'post', 'https://doskara-dev.herokuapp.com/repositories/canpush.json', {
       form: {
         repository: {
           name: repoName,
@@ -94,7 +94,7 @@ Runner.prototype = {
     });
   },
   saveCommits: function(atomId, commits) {
-    var url = 'https://doskara.herokuapp.com/repositories/push.json';
+    var url = 'https://doskara-dev.herokuapp.com/repositories/push.json';
     return Q.ninvoke(request, 'post', url, {
       form: {
         repository: {
